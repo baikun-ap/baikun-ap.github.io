@@ -17,7 +17,7 @@ const server = createServer((req, res) => {
 
 const CUT = { '3346cc4d': 'earth', '640b239a': 'venus', '3d559490': 'mars' };
 const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
-const routes = ['', 'course', 'lesson/starter-1/1', 'lesson/starter-1/2', 'lesson/starter-1/3', 'lesson/starter-1/4', 'lesson/starter-1/5', 'lesson/starter-1/6', 'lesson/starter-1/7', 'lesson/starter-1/8', 'cards', 'pinyin', 'tones', 'grammar', 'hanzi', 'hanzi/好', 'settings'];
+const routes = ['', 'course', 'lesson/starter-1/1', 'lesson/starter-1/2', 'lesson/starter-1/3', 'lesson/starter-1/4', 'lesson/starter-1/5', 'lesson/starter-1/6', 'lesson/starter-1/7', 'lesson/starter-1/8', 'lesson/jc1a-8/1', 'lesson/jc1a-8/6', 'lesson/jc1a-15/7', 'cards', 'pinyin', 'tones', 'grammar', 'hanzi', 'hanzi/好', 'settings'];
 const only = process.env.ONLY;
 let fail = 0;
 for (const [w, h] of [[390, 844], [1440, 900]]) {

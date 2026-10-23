@@ -396,3 +396,4 @@ select, .search { font: 15px var(--ui); color: var(--ink); background: var(--sun
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.audio-link { margin-top: 8px; }

@@ -1,12 +1,13 @@
 import type { Book, GrammarPoint, Lesson, Word } from '../content/schema';
 import { STARTER } from '../content/starter';
+import { JC1A } from '../content/jc1a';
 
 /**
  * Every book the site teaches from. A new textbook is one more Book object in
  * src/content/ added to this list; lessons, exercises, cards and the grammar
  * reference all pick it up from here.
  */
-export const BOOKS: Book[] = [STARTER];
+export const BOOKS: Book[] = [JC1A, STARTER];
 
 export const LESSONS: Lesson[] = BOOKS.flatMap((b) => b.lessons);
 export const LESSON_BY_ID = new Map(LESSONS.map((l) => [l.id, l]));

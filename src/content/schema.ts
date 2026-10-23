@@ -70,4 +70,6 @@ export interface Book {
   title: string;
   subtitle: string;
   lessons: Lesson[];
+  /** Official audio for the printed book, linked rather than copied. */
+  audio?: { label: string; url: string }[];
 }

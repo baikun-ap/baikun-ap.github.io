@@ -132,10 +132,10 @@ export function Course() {
         <section key={b.id} className="book">
           <h2 className="serif h2">{b.title}</h2>
           <p className="muted">{b.subtitle}</p>
+          {b.audio?.map((a) => <a key={a.url} className="chip audio-link" href={a.url} target="_blank" rel="noopener">🎧 {a.label}</a>)}
           <LessonGrid book={b.id} />
         </section>
       ))}
-      <p className="muted small note">Скоро здесь появятся уроки из твоих учебников.</p>
     </div>
   );
 }
