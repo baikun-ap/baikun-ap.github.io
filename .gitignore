@@ -26,3 +26,5 @@ dist-ssr
 .smoke/
 /tmp-shots/
 .cache/
+shots/app/
+shots/flow/

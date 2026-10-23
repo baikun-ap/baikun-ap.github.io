@@ -99,6 +99,11 @@ async function main() {
   await download(LICENSE_URLS, path.join(OUT_DIR, 'OFL.txt'));
 
   const chars = collectFromData();
+  // Course content and interface strings carry characters beyond the dictionary.
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+  for (const f of walk(path.join(ROOT, 'src')).filter((f) => /\.(ts|tsx)$/.test(f))) {
+    for (const ch of fs.readFileSync(f, 'utf8').match(/[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/g) ?? []) chars.add(ch);
+  }
   for (const ch of PINYIN + PUNCT) chars.add(ch);
   const text = [...chars].sort().join('');
 

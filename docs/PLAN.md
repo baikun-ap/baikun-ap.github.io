@@ -63,3 +63,18 @@ GitHub Pages репозитория `hanzi-trainer`: публичная ссыл
 
 `npm run build`, `npm run smoke`, `npm run tone-check`, e2e-скриншоты в
 Chromium для ширин 375, 430, 768, 1024, 1440 и 2560 px.
+
+## Как добавить книгу
+
+1. Создать `src/content/<книга>.ts` с объектом `Book` по схеме `src/content/schema.ts`.
+2. Добавить его в список `BOOKS` в `src/course/data.ts`.
+3. Запустить `npm run strokes` (порядок черт для новых иероглифов) и `npm run font`
+   (шрифт с новыми знаками), затем `npm run build`.
+
+Упражнения всех восьми шагов, карточки и справочник грамматики строятся из книги сами.
+
+## Проверки
+
+- `node scripts/app-check.mjs` — все разделы на 390 и 1440 px: нет горизонтальной прокрутки и ошибок.
+- `node scripts/flow-check.mjs` — урок проходится от 1-го до 8-го шага, прогресс и карточки сохраняются.
+- `node scripts/hero-check.mjs` — лендинг на 15 размерах экрана.
