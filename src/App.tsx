@@ -55,7 +55,7 @@ export default function App() {
     <div className="x">
       <div className="stars" aria-hidden="true" />
       <header className="x-top">
-        <a className="x-logo" href="../" aria-label="星汉 — на главную">xīng<i>hàn</i></a>
+        <a className="x-logo" href="../" aria-label="bai.kun — на главную">bai<i>.kun</i></a>
         <nav className="x-nav" aria-label="Разделы">
           {NAV.map((n) => <a key={n.key} href={n.href} aria-current={active === n.key ? 'page' : undefined}>{n.label}{n.key === 'cards' && due > 0 && <span className="pill">{due}</span>}</a>)}
         </nav>

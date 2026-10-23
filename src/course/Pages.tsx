@@ -61,8 +61,8 @@ export function Dashboard() {
       <section className="hero-card">
         <div className="hero-copy">
           <span className="eyebrow">{fresh ? '欢迎 · ДОБРО ПОЖАЛОВАТЬ' : '加油 · ПРОДОЛЖАЕМ'}</span>
-          <h1 className="serif">{fresh ? 'Начни свой путь по Млечному пути китайского' : `Урок ${nx.lesson.n}: ${nx.lesson.title}`}</h1>
-          <p className="muted">{fresh ? '星汉 xīnghàn — «звёздная река». Каждый урок проходит 8 шагов: от иероглифа до твоего голоса.' : `Следующий шаг — ${stepInfo.title.toLowerCase()}. ${nx.lesson.goal}`}</p>
+          <h1 className="serif">{fresh ? 'Начни свой путь в китайский язык' : `Урок ${nx.lesson.n}: ${nx.lesson.title}`}</h1>
+          <p className="muted">{fresh ? 'bai.kun — твой китайский среди звёзд. Каждый урок проходит 8 шагов: от иероглифа до твоего голоса.' : `Следующий шаг — ${stepInfo.title.toLowerCase()}. ${nx.lesson.goal}`}</p>
           <div className="row">
             <a className="btn primary lg" href={`#/lesson/${nx.lesson.id}/${nx.step}`}>{fresh ? 'Начать первый урок' : 'Продолжить'}</a>
             {due > 0 && <a className="btn lg" href="#/cards">Повторить {due} {plural(due, 'карточку', 'карточки', 'карточек')}</a>}
@@ -345,7 +345,7 @@ export function Settings() {
     const tones = await loadState();
     const blob = new Blob([JSON.stringify({ app: 'xinghan', at: new Date().toISOString(), course: state, tones }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = `xinghan-${today()}.json`; a.click();
+    a.href = URL.createObjectURL(blob); a.download = `baikun-${today()}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
   const importAll = async (f: File) => {
@@ -355,7 +355,7 @@ export function Settings() {
       actions.replace(data.course);
       if (data.tones) await saveState(data.tones);
       setMsg('Прогресс восстановлен.');
-    } catch { setMsg('Это не файл прогресса 星汉.'); }
+    } catch { setMsg('Это не файл прогресса bai.kun.'); }
   };
 
   return (
@@ -370,7 +370,7 @@ export function Settings() {
           </select></label>
         <label>Скорость речи: {state.settings.rate.toFixed(2)}
           <input type="range" min={0.5} max={1.2} step={0.05} value={state.settings.rate} onChange={(e) => actions.setSettings({ rate: +e.target.value })} /></label>
-        <button className="btn" onClick={() => say('你好，欢迎来到星汉！')}>Проверить голос</button>
+        <button className="btn" onClick={() => say('你好，欢迎！')}>Проверить голос</button>
       </section>
       <section className="panel form">
         <h3>Обучение</h3>
@@ -387,7 +387,7 @@ export function Settings() {
         {msg && <p className="small">{msg}</p>}
         <button className="btn danger" onClick={() => { if (confirm('Удалить весь прогресс курса?')) actions.reset(); }}>Сбросить прогресс курса</button>
       </section>
-      <p className="muted small">星汉 Xinghan · курс: {LESSONS.length} уроков · карточек: {Object.keys(state.cards).length}</p>
+      <p className="muted small">bai.kun · курс: {LESSONS.length} уроков · карточек: {Object.keys(state.cards).length}</p>
       <Bar value={LESSONS.filter((l) => state.lessons[l.id]?.doneAt).length / LESSONS.length} />
     </div>
   );
