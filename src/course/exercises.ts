@@ -114,9 +114,11 @@ function poolFor(lesson: Lesson): Word[] {
 }
 
 const limit = <T,>(a: T[], n: number) => shuffle(a).slice(0, n);
+/** Pattern entries such as «太……了» are taught in grammar, not quizzed as words. */
+const quizWords = (l: Lesson) => l.words.filter((w) => !w.zh.includes('…'));
 
-export function pinyinSet(l: Lesson): Question[] { return limit(l.words, 8).map((w) => pinyinQ(w, poolFor(l))); }
-export function toneSet(l: Lesson): Question[] { return limit(l.words, 8).map(toneQ); }
+export function pinyinSet(l: Lesson): Question[] { return limit(quizWords(l), 8).map((w) => pinyinQ(w, poolFor(l))); }
+export function toneSet(l: Lesson): Question[] { return limit(quizWords(l), 8).map(toneQ); }
 
 export function sentencesOf(l: Lesson): { zh: string; py: string; ru: string }[] {
   return [
@@ -127,7 +129,7 @@ export function sentencesOf(l: Lesson): { zh: string; py: string; ru: string }[]
 
 export function listenSet(l: Lesson): Question[] {
   const sents = sentencesOf(l);
-  const words = limit(l.words, 4).map((w) => listenQ(w, poolFor(l)));
+  const words = limit(quizWords(l), 4).map((w) => listenQ(w, poolFor(l)));
   const lines = limit(sents, 4).map((s) => listenQ(s, sents.length >= 4 ? sents : [...sents, ...ALL_WORDS]));
   return [...words, ...lines];
 }
@@ -139,7 +141,7 @@ export function buildSet(l: Lesson, n = 3): Question[] {
 
 export function testSet(l: Lesson): Question[] {
   const pool = poolFor(l);
-  const ws = shuffle(l.words);
+  const ws = shuffle(quizWords(l));
   const qs: Question[] = [
     ...ws.slice(0, 3).map((w) => meaningQ(w, pool)),
     ...ws.slice(3, 6).map((w) => reverseQ(w, pool)),

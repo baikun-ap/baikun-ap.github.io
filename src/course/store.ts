@@ -37,6 +37,7 @@ export interface CourseSettings {
   voiceURI: string | null;
   showPinyin: boolean;
   cardFront: 'zh' | 'ru';
+  theme: 'auto' | 'light' | 'dark';
 }
 
 export interface CourseState {
@@ -57,7 +58,7 @@ const KEY = 'xinghan-course-v1';
 export function emptyCourse(): CourseState {
   return {
     v: 1, lessons: {}, cards: {}, last: null, xp: 0, streak: 0, bestStreak: 0, lastDay: null, days: {},
-    settings: { rate: 0.8, voiceURI: null, showPinyin: true, cardFront: 'zh' },
+    settings: { rate: 0.8, voiceURI: null, showPinyin: true, cardFront: 'zh', theme: 'auto' },
   };
 }
 

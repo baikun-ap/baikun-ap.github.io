@@ -34,9 +34,17 @@
     <style>
       /* Painted before the stylesheet parses, so the first frame is never white
          on a dark desktop. */
-      :root { color-scheme: light; }
+      :root { color-scheme: light dark; }
       html, body { background: #f5f5f7; }
+      html[data-theme='dark'], html[data-theme='dark'] body { background: #101012; }
     </style>
+    <script>
+      try {
+        var t = localStorage.getItem('baikun-theme');
+        if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

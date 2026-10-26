@@ -443,6 +443,13 @@ export function Settings() {
         <button className="btn" onClick={() => say('你好，欢迎！')}>Проверить голос</button>
       </section>
       <section className="panel form">
+        <h3>Оформление</h3>
+        <label>Тема
+          <select value={state.settings.theme ?? 'auto'} onChange={(e) => actions.setSettings({ theme: e.target.value as 'auto' | 'light' | 'dark' })}>
+            <option value="auto">Как в системе</option><option value="light">Светлая</option><option value="dark">Тёмная</option>
+          </select></label>
+      </section>
+      <section className="panel form">
         <h3>Обучение</h3>
         <label className="check"><input type="checkbox" checked={state.settings.showPinyin} onChange={(e) => actions.setSettings({ showPinyin: e.target.checked })} /> Показывать пиньинь в вопросах «Что значит?»</label>
       </section>

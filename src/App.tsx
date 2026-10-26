@@ -32,11 +32,26 @@ export default function App() {
   useEffect(() => {
     navigator.serviceWorker?.getRegistrations().then((r) => r.forEach((x) => x.unregister())).catch(() => {});
     if ('caches' in window) caches.keys().then((k) => k.forEach((x) => caches.delete(x))).catch(() => {});
-    document.documentElement.dataset.theme = 'light';
     // Ask the browser not to evict saved progress under storage pressure.
     navigator.storage?.persist?.().catch(() => {});
   }, []);
   useEffect(() => setMore(false), [route]);
+
+  // Light or dark: the learner's choice, or the system's when set to auto.
+  const themePref = state?.settings.theme ?? 'auto';
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const on = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq?.addEventListener('change', on);
+    return () => mq?.removeEventListener('change', on);
+  }, []);
+  const theme = themePref === 'auto' ? (systemDark ? 'dark' : 'light') : themePref;
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#161617' : '#ffffff');
+    try { localStorage.setItem('baikun-theme', theme); } catch { /* ignore */ }
+  }, [theme]);
 
   const head = route[0] ?? '';
   const active = head === 'lesson' ? 'course' : head;
@@ -66,6 +81,14 @@ export default function App() {
           {NAV.map((n) => <a key={n.key} href={n.href} aria-current={active === n.key ? 'page' : undefined}>{n.label}{n.key === 'cards' && due > 0 && <span className="pill">{due}</span>}</a>)}
         </nav>
         {state && <span className="x-streak" title="Дней подряд">🔥 {state.streak}</span>}
+        {state && (
+          <button type="button" className="theme-btn" aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            onClick={() => actions.setSettings({ theme: theme === 'dark' ? 'light' : 'dark' })}>
+            {theme === 'dark'
+              ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+              : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>}
+          </button>
+        )}
         {gh.connected && <a className="x-account" href="#/settings" title={`Прогресс синхронизируется с GitHub: ${gh.login}`}><span>{gh.status === 'syncing' ? '⟳' : gh.status === 'error' ? '!' : '☁︎'}</span></a>}
         {cloudConfigured && (
           <a className="x-account" href="#/settings" title={cloud.user ? `Синхронизация: ${cloud.user.email}` : 'Войти через Google'}>
