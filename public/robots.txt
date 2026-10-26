@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://baikun-ap.github.io/sitemap.xml
