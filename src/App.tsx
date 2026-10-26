@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCourse, dueCards } from './course/store';
 import { useCloud, cloudConfigured } from './course/cloud';
+import { useGithubSync } from './course/ghsync';
 import { CourseCtx, useRoute } from './course/ui';
 import Lesson from './course/Lesson';
 import Tones from './course/Tones';
@@ -20,6 +21,7 @@ const NAV: { href: string; key: string; label: string; zh: string; main?: boolea
 export default function App() {
   const { state, actions } = useCourse();
   const cloud = useCloud(state, actions.replace);
+  const gh = useGithubSync(state, actions.replace);
   const route = useRoute();
   const [more, setMore] = useState(false);
 
@@ -30,7 +32,7 @@ export default function App() {
   useEffect(() => {
     navigator.serviceWorker?.getRegistrations().then((r) => r.forEach((x) => x.unregister())).catch(() => {});
     if ('caches' in window) caches.keys().then((k) => k.forEach((x) => caches.delete(x))).catch(() => {});
-    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.dataset.theme = 'light';
     // Ask the browser not to evict saved progress under storage pressure.
     navigator.storage?.persist?.().catch(() => {});
   }, []);
@@ -64,6 +66,7 @@ export default function App() {
           {NAV.map((n) => <a key={n.key} href={n.href} aria-current={active === n.key ? 'page' : undefined}>{n.label}{n.key === 'cards' && due > 0 && <span className="pill">{due}</span>}</a>)}
         </nav>
         {state && <span className="x-streak" title="Дней подряд">🔥 {state.streak}</span>}
+        {gh.connected && <a className="x-account" href="#/settings" title={`Прогресс синхронизируется с GitHub: ${gh.login}`}><span>{gh.status === 'syncing' ? '⟳' : gh.status === 'error' ? '!' : '☁︎'}</span></a>}
         {cloudConfigured && (
           <a className="x-account" href="#/settings" title={cloud.user ? `Синхронизация: ${cloud.user.email}` : 'Войти через Google'}>
             {cloud.user?.photo ? <img src={cloud.user.photo} alt="" referrerPolicy="no-referrer" /> : <span>{cloud.user ? '☁︎' : 'Войти'}</span>}
@@ -72,7 +75,7 @@ export default function App() {
       </header>
 
       <main className="x-main">
-        {state ? <CourseCtx.Provider value={{ state, actions, cloud }}>{page}</CourseCtx.Provider> : <div className="page"><div className="sk-block" /></div>}
+        {state ? <CourseCtx.Provider value={{ state, actions, cloud, gh }}>{page}</CourseCtx.Provider> : <div className="page"><div className="sk-block" /></div>}
       </main>
 
       <nav className="x-tabs" aria-label="Разделы">

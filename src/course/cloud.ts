@@ -69,7 +69,7 @@ export function mergeCourse(local: CourseState, remote: CourseState): CourseStat
   };
 }
 
-const pickTones = (a: AppState | null, b: AppState | null) =>
+export const pickTones = (a: AppState | null, b: AppState | null) =>
   !a ? b : !b ? a : (b.profile.totalReviews > a.profile.totalReviews ? b : a);
 
 const plain = <T,>(x: T): T => JSON.parse(JSON.stringify(x));

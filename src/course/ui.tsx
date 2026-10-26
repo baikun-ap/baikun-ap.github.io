@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CourseActions, CourseState } from './store';
 import type { Cloud } from './cloud';
+import type { GithubSync } from './ghsync';
 import { speak, stopSpeaking } from '../lib/speech';
 import { useVoiceStatus } from '../components/Speaker';
 import { VOICE_HELP } from '../lib/speech';
@@ -8,7 +9,7 @@ import { parsePinyin } from '../lib/pinyin';
 
 /* ---------- context ---------- */
 
-interface Ctx { state: CourseState; actions: CourseActions; cloud: Cloud }
+interface Ctx { state: CourseState; actions: CourseActions; cloud: Cloud; gh: GithubSync }
 export const CourseCtx = createContext<Ctx | null>(null);
 export function useCourseCtx(): Ctx {
   const c = useContext(CourseCtx);
