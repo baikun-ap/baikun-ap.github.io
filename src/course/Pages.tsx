@@ -336,6 +336,10 @@ function WriteToggle({ c }: { c: string }) {
 export function Settings() {
   const { state, actions, cloud, gh } = useCourseCtx();
   const [token, setToken] = useState('');
+  const [share, setShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // GitHub refuses a second token with the same note, so every new token gets the date and time in its name.
+  const tokenUrl = `https://github.com/settings/tokens/new?scopes=gist&description=${encodeURIComponent(`bai.kun ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`)}`;
   useVoiceStatus();
   const voices = chineseVoices();
   const file = useRef<HTMLInputElement>(null);
@@ -383,15 +387,28 @@ export function Settings() {
               <button className="btn" onClick={() => gh.syncNow()}>{t('Синхронизировать', 'Sync now')}</button>
               <button className="btn" onClick={() => gh.disconnect()}>{t('Отключить', 'Disconnect')}</button>
             </div>
+            <div className="share-key">
+              <button className="btn" onClick={() => { setShare(!share); setCopied(false); }}>{share ? t('Скрыть ключ', 'Hide the token') : t('📱 Подключить другое устройство', '📱 Connect another device')}</button>
+              {share && (
+                <>
+                  <p className="muted small">{t('Скопируй этот ключ и вставь его на телефоне: Настройки → Синхронизация → «Подключить». Один ключ подходит для всех твоих устройств. Никому его не отправляй.', 'Copy this token and paste it on your phone: Settings → Sync → Connect. One token works on all your devices. Do not send it to anyone.')}</p>
+                  <div className="row">
+                    <input className="search" readOnly value={gh.token() ?? ''} onFocus={(e) => e.target.select()} style={{ marginBottom: 0 }} />
+                    <button className="btn primary" onClick={() => { navigator.clipboard?.writeText(gh.token() ?? '').then(() => setCopied(true)).catch(() => {}); }}>{copied ? t('Скопировано ✓', 'Copied ✓') : t('Скопировать', 'Copy')}</button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <>
             <p className="muted small">{t('Прогресс, карточки и тоны будут сохраняться в секретный Gist на твоём GitHub и подтягиваться на любом устройстве, где ты введёшь ключ. Работает в Китае без VPN.', 'Your progress, cards and tones are saved to a secret Gist on your GitHub and loaded on every device where you enter the token.')}</p>
             <ol className="install-steps">
-              <li>{t('Открой', 'Open')} <a className="link" href="https://github.com/settings/tokens/new?scopes=gist&description=bai.kun" target="_blank" rel="noopener">{t('создание ключа на GitHub', 'new token on GitHub')}</a> {t('(галочка «gist» уже стоит).', '(the “gist” box is already ticked).')}</li>
+              <li>{t('Открой', 'Open')} <a className="link" href={tokenUrl} target="_blank" rel="noopener">{t('создание ключа на GitHub', 'new token on GitHub')}</a> {t('(галочка «gist» уже стоит).', '(the “gist” box is already ticked).')}</li>
               <li>{t('В «Expiration» выбери', 'Under “Expiration” choose')} <b>No expiration</b>{t(', внизу нажми', ', then press')} <b>Generate token</b>.</li>
               <li>{t('Скопируй ключ (начинается с', 'Copy the token (it starts with')} <code>ghp_</code>{t(') и вставь сюда.', ') and paste it here.')}</li>
             </ol>
+            <p className="muted small">{t('Уже подключал другое устройство? Проще взять ключ оттуда: Настройки → Синхронизация → «Подключить другое устройство». Прогресс найдётся сам и с новым ключом.', 'Already connected another device? It is easier to take the token from there: Settings → Sync → Connect another device. Your progress is found automatically with a new token too.')}</p>
             <form className="row" onSubmit={(e) => { e.preventDefault(); gh.connect(token); setToken(''); }}>
               <input className="search" type="password" autoComplete="off" placeholder="ghp_…" value={token} onChange={(e) => setToken(e.target.value)} style={{ marginBottom: 0 }} />
               <button className="btn primary" disabled={!token.trim() || gh.status === 'connecting'}>{gh.status === 'connecting' ? t('Подключаю…', 'Connecting…') : t('Подключить', 'Connect')}</button>

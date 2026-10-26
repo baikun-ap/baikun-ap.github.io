@@ -38,7 +38,7 @@ async function device() {
 const stored = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('xinghan-course-v1') || 'null'));
 async function connect(page, token = 'ghp_test') {
   await page.goto('http://localhost:4177/app/#/settings'); await page.waitForTimeout(600);
-  await page.fill('input[type=password]', token); await page.click('text=Подключить'); await page.waitForTimeout(1500);
+  await page.fill('input[type=password]', token); await page.click('form button.primary'); await page.waitForTimeout(1500);
 }
 
 // Device A: wrong token first, then the right one, then progress.
@@ -72,6 +72,8 @@ const sa = await stored(A.page);
 check(sa && Object.keys(sa.cards).length === 23, `device A pulled merged deck (${sa && Object.keys(sa.cards).length})`);
 check(!A.errors.length && !B.errors.length, 'no page errors ' + [...A.errors, ...B.errors].join(' | '));
 await A.page.goto('http://localhost:4177/app/#/settings'); await A.page.waitForTimeout(500);
+await A.page.click('text=📱 Подключить другое устройство'); await A.page.waitForTimeout(300);
+check((await A.page.inputValue('.share-key input')).startsWith('ghp_'), 'share shows the token');
 await A.page.screenshot({ path: 'shots/sync-settings.png', fullPage: true });
 await b.close(); server.close();
 console.log(fails.length ? `${fails.length} FAILED` : 'sync ok');

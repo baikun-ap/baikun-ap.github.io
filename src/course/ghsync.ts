@@ -142,7 +142,7 @@ export function useGithubSync(state: CourseState | null, replace: (s: CourseStat
     setLogin(null); setStatus('off'); setSyncedAt(null);
   }, [upload]);
 
-  return { connected: !!login, login, status, error, syncedAt, connect, disconnect, syncNow: pull };
+  return { connected: !!login, login, status, error, syncedAt, connect, disconnect, syncNow: pull, token: () => token.current };
 }
 
 export type GithubSync = ReturnType<typeof useGithubSync>;

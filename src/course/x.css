@@ -577,3 +577,6 @@ input, select, textarea { font-size: 16px; }   /* below 16px Safari zooms the pa
 .theme-btn svg { width: 18px; height: 18px; }
 .lang-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 28px; padding: 0 8px; border-radius: 14px; border: 1px solid var(--rule, rgba(0,0,0,.12)); background: transparent; color: var(--ink); font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1; letter-spacing: .04em; cursor: pointer; }
 .lang-btn:hover { background: var(--mist); }
+.share-key { flex-basis: 100%; display: grid; gap: 10px; margin-top: 4px; }
+.share-key .btn { justify-self: start; }
+.share-key .row .search { flex: 1; min-width: 0; font-family: var(--mono, monospace); font-size: 14px; }
