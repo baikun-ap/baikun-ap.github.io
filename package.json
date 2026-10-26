@@ -18,6 +18,7 @@
     "hero": "node scripts/hero-check.mjs"
   },
   "dependencies": {
+    "firebase": "^11.10.0",
     "hanzi-writer": "^3.7.2",
     "idb-keyval": "^6.3.0",
     "react": "^19.2.8",

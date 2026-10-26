@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCourse, dueCards } from './course/store';
+import { useCloud, cloudConfigured } from './course/cloud';
 import { CourseCtx, useRoute } from './course/ui';
 import Lesson from './course/Lesson';
 import Tones from './course/Tones';
@@ -18,6 +19,7 @@ const NAV: { href: string; key: string; label: string; zh: string; main?: boolea
 
 export default function App() {
   const { state, actions } = useCourse();
+  const cloud = useCloud(state, actions.replace);
   const route = useRoute();
   const [more, setMore] = useState(false);
 
@@ -29,6 +31,8 @@ export default function App() {
     navigator.serviceWorker?.getRegistrations().then((r) => r.forEach((x) => x.unregister())).catch(() => {});
     if ('caches' in window) caches.keys().then((k) => k.forEach((x) => caches.delete(x))).catch(() => {});
     document.documentElement.dataset.theme = 'dark';
+    // Ask the browser not to evict saved progress under storage pressure.
+    navigator.storage?.persist?.().catch(() => {});
   }, []);
   useEffect(() => setMore(false), [route]);
 
@@ -60,10 +64,15 @@ export default function App() {
           {NAV.map((n) => <a key={n.key} href={n.href} aria-current={active === n.key ? 'page' : undefined}>{n.label}{n.key === 'cards' && due > 0 && <span className="pill">{due}</span>}</a>)}
         </nav>
         {state && <span className="x-streak" title="Дней подряд">🔥 {state.streak}</span>}
+        {cloudConfigured && (
+          <a className="x-account" href="#/settings" title={cloud.user ? `Синхронизация: ${cloud.user.email}` : 'Войти через Google'}>
+            {cloud.user?.photo ? <img src={cloud.user.photo} alt="" referrerPolicy="no-referrer" /> : <span>{cloud.user ? '☁︎' : 'Войти'}</span>}
+          </a>
+        )}
       </header>
 
       <main className="x-main">
-        {state ? <CourseCtx.Provider value={{ state, actions }}>{page}</CourseCtx.Provider> : <div className="page"><div className="sk-block" /></div>}
+        {state ? <CourseCtx.Provider value={{ state, actions, cloud }}>{page}</CourseCtx.Provider> : <div className="page"><div className="sk-block" /></div>}
       </main>
 
       <nav className="x-tabs" aria-label="Разделы">

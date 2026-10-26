@@ -1,34 +1,40 @@
 /* ==========================================================================
-   bai.kun — course app.
-   Same night sky as the landing page: deep navy, one cyan accent, Prata for
-   headings. Tone colours keep their meaning everywhere (1 blue, 2 green,
+   bai.kun — course app. «Midnight projection room»: near-black canvas with
+   layered cosmic gradients, one blue accent (Iris Glow) used surgically,
+   large weight-400 type with tight tracking, pill buttons, 10px cards with a
+   violet hairline. Tone colours keep their teaching meaning (1 blue, 2 green,
    3 amber, 4 magenta) and always travel with the tone number.
    ========================================================================== */
 
 :root[data-theme='dark'] {
-  --navy: #04101f;
-  --ground: #04101f;
-  --surface: #0a1a2e;
-  --raised: #0f2238;
-  --sunk: #061426;
-  --rule: #1c3350;
-  --rule-soft: #142a44;
-  --ink: #eef5fb;
-  --ink-muted: #9db1c6;
-  --ink-faint: #6c829a;
-  --cyan: #79dce8;
-  --cyan-deep: #2c9db0;
-  --glass: rgba(14, 31, 53, .82);
-  --glass-line: rgba(255, 255, 255, .10);
+  --navy: #0a0a13;           /* Obsidian */
+  --ground: #0a0a13;
+  --void: #040407;
+  --surface: #08080c;        /* Graphite */
+  --raised: #12121c;
+  --sunk: #040407;
+  --halo: #181826;
+  --rule: #2a2a32;           /* Charcoal */
+  --rule-soft: #1d1d26;
+  --ink: #fcfcfc;            /* Carbon Vellum */
+  --ink-muted: #a3a3b3;      /* Ash */
+  --ink-faint: #757580;      /* Smoke */
+  --cyan: #6199f6;           /* Iris Glow — the only accent */
+  --cyan-deep: #3f74d6;
+  --twilight: #4f4f80;
+  --lilac: #dedfee;
+  --glass: rgba(8, 8, 12, .86);
+  --glass-line: rgba(79, 79, 128, .55);
   --good: #3fc68a;
   --bad: #f07272;
   --mid: #e8b24c;
   --t1: #6aa2f2; --t2: #3fc68a; --t3: #e8a43a; --t4: #e46aae; --t5: #8296ab;
-  --serif: 'Prata', Georgia, serif;
-  --logo: 'Poppins', sans-serif;
-  --ui: 'Golos Text', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --logo: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --zh: 'Noto Sans SC Subset', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  --r: 18px;
+  --r: 10px;
   --tab-h: 64px;
 }
 
@@ -397,3 +403,109 @@ select, .search { font: 15px var(--ui); color: var(--ink); background: var(--sun
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .audio-link { margin-top: 8px; }
+
+
+/* ==========================================================================
+   Frame theme layer — overrides on top of the base layout above.
+   ========================================================================== */
+body { font-feature-settings: 'ss01' on, 'cv11' on; letter-spacing: .01em; }
+.stars {
+  background:
+    radial-gradient(1100px 700px at 50% 115%, rgba(0, 11, 53, .95), transparent 70%),
+    radial-gradient(900px 600px at 0% 0%, rgba(14, 15, 32, .9), transparent 70%),
+    radial-gradient(700px 500px at 100% 20%, rgba(79, 79, 128, .18), transparent 70%),
+    linear-gradient(195deg, #0a0010 0%, #02000a 45%, #0c1d32 100%);
+  background-size: auto;
+}
+.x-top { background: rgba(4, 4, 7, .82); border-bottom: 1px solid var(--rule); }
+.x-logo { font-weight: 600; letter-spacing: -.4px; }
+.x-logo i { color: var(--cyan); }
+.x-nav a { color: var(--ink); font-size: 14px; opacity: .72; }
+.x-nav a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 6px; }
+.x-nav a[aria-current='page'] { opacity: 1; }
+.x-nav a[aria-current='page']::after { height: 2px; background: var(--cyan); }
+
+/* type: size does the work, weight whispers */
+.serif, .h1, .h2, .step-h, .gram h3, .dialogue h3, .form h3, .lesson-title h1, .hero-card h1 { font-family: var(--ui); font-weight: 400; }
+.h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.02; letter-spacing: -.04em; }
+.h2 { font-size: clamp(24px, 3.6vw, 32px); line-height: 1.1; letter-spacing: -.03em; }
+.hero-card h1 { font-size: clamp(32px, 5.4vw, 56px); line-height: 1.0; letter-spacing: -.04em; }
+.lesson-title h1 { letter-spacing: -.035em; line-height: 1.05; }
+.step-h { font-size: 26px; letter-spacing: -.03em; }
+.gram h3, .dialogue h3, .form h3 { font-size: 22px; letter-spacing: -.025em; }
+.lead, .hero-card p { color: var(--ink-faint); font-size: 17px; line-height: 1.4; }
+.muted { color: var(--ink-muted); }
+
+/* eyebrow stamps: mono caps in Iris Glow */
+.eyebrow, .lesson-n, .q-ask, .x-eyebrow { font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--cyan); line-height: 1; }
+
+/* buttons: pills, no shadows */
+.btn { border-radius: 100px; background: transparent; border: 1px solid rgba(252, 252, 252, .35); font-weight: 400; font-size: 14px; min-height: 44px; padding: 0 22px; }
+.btn:hover:not(:disabled) { background: var(--ink); color: var(--navy); border-color: var(--ink); }
+.btn.primary { background: var(--ink); color: var(--navy); border: 0; box-shadow: none; font-weight: 500; }
+.btn.primary:hover:not(:disabled) { background: var(--lilac); }
+.btn.lg { min-height: 50px; padding: 0 28px; font-size: 15px; }
+.chip { border-radius: 100px; background: transparent; border: 1px solid var(--rule); font-size: 13px; }
+.chip:hover, .chip.on { border-color: var(--cyan); color: var(--cyan); }
+.say { background: transparent; border-color: var(--rule); color: var(--cyan); }
+.say.on { background: rgba(97, 153, 246, .12); border-color: var(--cyan); }
+.pill { background: var(--cyan); color: #fff; }
+
+/* surfaces: graphite cards with a thin violet halo */
+.panel, .hero-card, .stat, .world, .lesson-card, .gram, .flash, .speak-card, .opt, .grade, .hz-cell, .step, .x-sheet-in a, .seg {
+  background: var(--surface); border: 1px solid var(--glass-line); border-radius: 10px;
+}
+.panel, .hero-card { box-shadow: inset 0 0 0 1px rgba(79, 79, 128, .25), 0 0 60px rgba(79, 79, 128, .12); }
+.hero-card { background: linear-gradient(160deg, rgba(97, 153, 246, .08), rgba(8, 8, 12, .9) 45%, rgba(79, 79, 128, .14)); border-radius: 24px; padding: 40px; }
+.hero-zh { color: var(--cyan); text-shadow: 0 0 60px rgba(97, 153, 246, .35); }
+.stat b { font-family: var(--ui); font-weight: 400; font-size: 34px; letter-spacing: -.03em; }
+.lesson-card:hover, .hz-cell:hover { border-color: var(--cyan); transform: none; }
+.lesson-card h3, .world h3 { font-weight: 500; }
+.world h3 .zh, .lesson-title h1 .zh { color: var(--cyan); }
+.formula { background: rgba(97, 153, 246, .08); border: 1px solid rgba(97, 153, 246, .35); color: #b9d0fb; border-radius: 10px; }
+.examples li, .line, .wordlist li { background: rgba(255, 255, 255, .025); border-radius: 10px; }
+.step { background: transparent; }
+.step.cur { background: var(--ink); color: var(--navy); border-color: var(--ink); }
+.step.done { color: var(--good); border-color: rgba(63, 198, 138, .4); }
+.step-num { border-color: var(--cyan); color: var(--cyan); font-family: var(--mono); font-weight: 400; }
+.opt { background: transparent; }
+.opt:hover:not(:disabled) { border-color: var(--cyan); }
+.tile { background: var(--raised); border-color: var(--rule); border-radius: 10px; }
+.tile.on { border-color: var(--cyan); background: rgba(97, 153, 246, .12); }
+.mic { background: var(--ink); color: var(--navy); }
+.result-num, .big-num { font-family: var(--ui); font-weight: 400; letter-spacing: -.04em; color: var(--ink); }
+.ring-fg { stroke: var(--cyan); }
+.bar > span { background: var(--cyan); }
+.seg button.on { background: var(--ink); color: var(--navy); }
+.chart th { background: var(--surface); color: var(--cyan); font-family: var(--mono); font-weight: 400; }
+.chart td button.on { background: var(--cyan); color: #fff; }
+.syl-base { font-family: var(--ui); font-weight: 400; letter-spacing: -.03em; }
+select, .search { background: var(--surface); border-color: var(--rule); border-radius: 100px; padding: 0 18px; }
+.warn { border-radius: 10px; }
+.x-tabs { background: rgba(4, 4, 7, .94); border-top: 1px solid var(--rule); }
+.x-tabs a[aria-current='page'], .x-tabs button.on { color: var(--ink); }
+.x-tabs a[aria-current='page'] .zh, .x-tabs button.on .zh { color: var(--cyan); }
+.x-sheet-in { background: var(--void); border-top: 1px solid var(--glass-line); }
+.x-sheet-in .zh { color: var(--cyan); }
+.planet-dot { box-shadow: 0 0 40px rgba(97, 153, 246, .18); }
+
+/* account / sync card */
+.sync { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.sync .avatar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-line); }
+.sync-state { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--cyan); }
+.g-btn { display: inline-flex; align-items: center; gap: 10px; }
+.g-btn svg { width: 18px; height: 18px; }
+
+/* iPhone: room for the notch and home indicator when installed to the Home Screen */
+.x-top { padding-top: env(safe-area-inset-top); height: calc(64px + env(safe-area-inset-top)); }
+.x-tabs a, .x-tabs button { -webkit-tap-highlight-color: transparent; }
+input, select, textarea { font-size: 16px; }   /* below 16px Safari zooms the page on focus */
+@media (max-width: 860px) {
+  .x-top { height: calc(56px + env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+}
+@media (display-mode: standalone) { body { overscroll-behavior-y: none; } }
+.install-steps { margin: 8px 0 0; padding-left: 20px; color: var(--ink-muted); line-height: 1.6; }
+
+.x-account { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 14px; border-radius: 100px; border: 1px solid var(--rule); color: var(--ink); text-decoration: none; font-size: 13px; }
+.x-account img { width: 34px; height: 34px; border-radius: 50%; margin: 0 -14px; }
+.x-streak + .x-account { margin-left: 4px; }
