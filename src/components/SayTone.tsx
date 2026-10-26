@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PitchTracker, classifyTone, micAvailable, micErrorFrom, MIC_MESSAGES, resample, toContour, type MicError, type PitchFrame, type ToneReading } from '../lib/pitch';
 import { TONE_NAMES } from '../lib/pinyin';
+import { t as tx } from '../i18n';
 import type { SyllableEntry } from '../lib/syllables';
 import ToneStaff from './ToneStaff';
 
@@ -108,7 +109,7 @@ export default function SayTone({ syllable, strictness, onDone }: Props) {
         tone={target}
         voice={reading ? reading.shape : live}
         voiceTone={reading?.tone ?? null}
-        label={`Эталон тона ${target} и контур голоса`}
+        label={tx(`Эталон тона ${target} и контур голоса`, `Model of tone ${target} and your voice contour`)}
       />
 
       <div className="row" style={{ justifyContent: 'center' }}>
@@ -116,7 +117,7 @@ export default function SayTone({ syllable, strictness, onDone }: Props) {
           className={`mic-btn ${recording ? 'live' : ''}`}
           onClick={recording ? finish : start}
           disabled={!supported && phase.kind !== 'error'}
-          aria-label={recording ? 'Остановить запись' : 'Записать голос'}
+          aria-label={recording ? tx('Остановить запись', 'Stop recording') : tx('Записать голос', 'Record your voice')}
         >
           {recording ? (
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" /></svg>
@@ -137,9 +138,9 @@ export default function SayTone({ syllable, strictness, onDone }: Props) {
 
       <p className="tiny" style={{ textAlign: 'center', margin: 0 }}>
         {recording
-          ? 'Говорю слушаю — произнеси слог и нажми ещё раз'
+          ? tx('Слушаю — произнеси слог и нажми ещё раз', 'Listening — say the syllable and tap again')
           : phase.kind === 'idle'
-            ? `Скажи «${syllable.marked}» — ${TONE_NAMES[syllable.tone]}`
+            ? tx(`Скажи «${syllable.marked}» — ${TONE_NAMES[syllable.tone]}`, `Say “${syllable.marked}” — ${TONE_NAMES[syllable.tone]}`)
             : ''}
       </p>
 
@@ -147,21 +148,21 @@ export default function SayTone({ syllable, strictness, onDone }: Props) {
         <>
           {reading.tone === null ? (
             <p className="verdict no">
-              Голоса не слышно. Скажи чуть громче и потяни гласную — нужно хотя бы полсекунды звука.
+              {tx('Голоса не слышно. Скажи чуть громче и потяни гласную — нужно хотя бы полсекунды звука.', 'No voice heard. Speak a little louder and hold the vowel — at least half a second of sound.')}
             </p>
           ) : (
             <p className={`verdict ${heardRight ? 'ok' : 'no'}`}>
               {heardRight
-                ? `Похоже на тон ${target}`
-                : `Услышал тон ${reading.tone} — ${TONE_NAMES[reading.tone]}, а нужен ${target}`}
+                ? tx(`Похоже на тон ${target}`, `Sounds like tone ${target}`)
+                : tx(`Услышал тон ${reading.tone} — ${TONE_NAMES[reading.tone]}, а нужен ${target}`, `Heard tone ${reading.tone} — ${TONE_NAMES[reading.tone]}, but tone ${target} is needed`)}
             </p>
           )}
 
           <div className="readout">
-            <span>уверенность <b>{Math.round(reading.scores[target] * 100)}%</b></span>
-            <span>размах <b>{reading.range.toFixed(1)} пт</b></span>
-            <span>наклон <b>{reading.slope > 0 ? '+' : ''}{reading.slope.toFixed(1)}</b></span>
-            <span>длина <b>{Math.round(reading.voicedMs)} мс</b></span>
+            <span>{tx('уверенность', 'confidence')} <b>{Math.round(reading.scores[target] * 100)}%</b></span>
+            <span>{tx('размах', 'range')} <b>{reading.range.toFixed(1)} {tx('пт', 'st')}</b></span>
+            <span>{tx('наклон', 'slope')} <b>{reading.slope > 0 ? '+' : ''}{reading.slope.toFixed(1)}</b></span>
+            <span>{tx('длина', 'length')} <b>{Math.round(reading.voicedMs)} {tx('мс', 'ms')}</b></span>
           </div>
           <p className="tiny" style={{ textAlign: 'center', margin: 0, maxWidth: '26rem' }}>{advice(reading, target)}</p>
         </>
@@ -182,11 +183,11 @@ export default function SayTone({ syllable, strictness, onDone }: Props) {
 /** Concrete, measurable advice rather than "try again". */
 function advice(r: ToneReading, target: number): string {
   if (r.tone === null) return '';
-  if (r.tone === target && r.scores[target] > 0.75) return 'Форма чистая — так и держи.';
-  if (r.range < 2 && target !== 1) return 'Голос почти не двигается. Тон — это движение высоты, разгони его смелее.';
-  if (target === 1 && r.range > 3) return 'Первый тон ровный: держи одну высоту, не давай голосу гулять.';
-  if (target === 2 && r.slope < 2) return 'Второму тону нужен подъём до самого конца — как вопрос «да?».';
-  if (target === 3 && r.slope < 0) return 'Третий тон сначала проваливается вниз, а потом идёт вверх. Верх в конце ты не добрал.';
-  if (target === 4 && r.slope > -2) return 'Четвёртый тон падает резко и коротко — как приказ «стой!».';
-  return 'Сравни линии: серая — эталон, цветная — твой голос.';
+  if (r.tone === target && r.scores[target] > 0.75) return tx('Форма чистая — так и держи.', 'Clean shape — keep it like that.');
+  if (r.range < 2 && target !== 1) return tx('Голос почти не двигается. Тон — это движение высоты, разгони его смелее.', 'Your pitch barely moves. A tone is a movement of pitch — push it more boldly.');
+  if (target === 1 && r.range > 3) return tx('Первый тон ровный: держи одну высоту, не давай голосу гулять.', 'The first tone is level: hold one pitch, do not let it wander.');
+  if (target === 2 && r.slope < 2) return tx('Второму тону нужен подъём до самого конца — как вопрос «да?».', 'The second tone rises all the way to the end — like asking “yeah?”.');
+  if (target === 3 && r.slope < 0) return tx('Третий тон сначала проваливается вниз, а потом идёт вверх. Верх в конце ты не добрал.', 'The third tone dips down first, then goes up. You did not reach the top at the end.');
+  if (target === 4 && r.slope > -2) return tx('Четвёртый тон падает резко и коротко — как приказ «стой!».', 'The fourth tone falls sharp and short — like the command “stop!”.');
+  return tx('Сравни линии: серая — эталон, цветная — твой голос.', 'Compare the lines: grey is the model, colour is your voice.');
 }

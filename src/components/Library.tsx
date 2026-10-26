@@ -3,6 +3,7 @@ import type { AppState } from '../lib/types';
 import { cardId } from '../lib/types';
 import { MINIMAL_PAIRS, toneRow, SYLLABLES } from '../lib/syllables';
 import { TONE_NAMES, type Tone } from '../lib/pinyin';
+import { t as tx } from '../i18n';
 import { maturity } from '../lib/srs';
 import Speaker from './Speaker';
 import ToneStaff from './ToneStaff';
@@ -41,18 +42,18 @@ export default function Library({ state }: Props) {
   return (
     <div className="stack">
       <div>
-        <h1>Минимальные пары</h1>
+        <h1>{tx('Минимальные пары', 'Minimal pairs')}</h1>
         <p className="lede">
-          Слоги, которые отличаются только тоном — {MINIMAL_PAIRS.length} основ из {SYLLABLES.length} слогов.
-          Пустая клетка значит, что такого чтения в словаре нет.
+          {tx(`Слоги, которые отличаются только тоном — ${MINIMAL_PAIRS.length} основ из ${SYLLABLES.length} слогов. Пустая клетка значит, что такого чтения в словаре нет.`,
+            `Syllables that differ only in tone — ${MINIMAL_PAIRS.length} bases out of ${SYLLABLES.length} syllables. An empty cell means the dictionary has no such reading.`)}
         </p>
         <input
           className="field"
           style={{ padding: '.55rem .7rem', borderRadius: 'var(--r-md)', border: '1px solid var(--rule)', background: 'var(--surface)', maxWidth: '18rem' }}
-          placeholder="Поиск: ma, mǎ или 马"
+          placeholder={tx('Поиск: ma, mǎ или 马', 'Search: ma, mǎ or 马')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Поиск по слогам"
+          aria-label={tx('Поиск по слогам', 'Search syllables')}
         />
       </div>
 
@@ -61,12 +62,12 @@ export default function Library({ state }: Props) {
           <thead>
             <tr>
               <th style={{ textAlign: 'left', padding: '.4rem .5rem', fontSize: '.72rem', color: 'var(--ink-faint)', fontWeight: 500 }}>
-                основа
+                {tx('основа', 'base')}
               </th>
               {([1, 2, 3, 4] as Tone[]).map((t) => (
                 <th key={t} className={`tone-${t}`} style={{ padding: '.4rem .5rem', fontSize: '.72rem', fontWeight: 500 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.15rem' }}>
-                    <ToneStaff size="glyph" tone={t} solo label={`Тон ${t}: ${TONE_NAMES[t]}`} />
+                    <ToneStaff size="glyph" tone={t} solo label={`${tx('Тон', 'Tone')} ${t}: ${TONE_NAMES[t]}`} />
                     <span style={{ color: 'var(--tone)', fontFamily: 'var(--mono)' }}>{t}</span>
                   </div>
                 </th>
@@ -105,7 +106,7 @@ export default function Library({ state }: Props) {
         </table>
       </div>
 
-      <p className="tiny">● — слог уже в колоде, ○ — ещё не встречался.</p>
+      <p className="tiny">{tx('● — слог уже в колоде, ○ — ещё не встречался.', '● — already in your deck, ○ — not met yet.')}</p>
     </div>
   );
 }

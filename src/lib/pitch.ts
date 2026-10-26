@@ -16,6 +16,7 @@
  */
 
 import type { Tone } from './pinyin';
+import { tr } from '../i18n';
 
 /** Human speech, generously bounded: roughly E1 to B4. */
 const MIN_HZ = 65;
@@ -117,14 +118,13 @@ export function micErrorFrom(e: unknown): MicError {
   return 'failed';
 }
 
-export const MIC_MESSAGES: Record<MicError, string> = {
-  denied:
-    'Браузер не дал доступ к микрофону. Нажми на замок слева от адреса и разреши микрофон для этого сайта.',
-  'no-device': 'Микрофон не найден. Проверь, что он подключён и выбран в настройках системы.',
-  insecure: 'Микрофон работает только на https. Открой сайт по https-ссылке.',
-  unsupported: 'Этот браузер не даёт доступ к микрофону. Нужен Chrome, Edge или Safari посвежее.',
-  failed: 'Не удалось включить микрофон. Закрой другие приложения, которые могут его занимать.',
-};
+export const MIC_MESSAGES: Record<MicError, string> = tr({
+  denied: ['Браузер не дал доступ к микрофону. Нажми на замок слева от адреса и разреши микрофон для этого сайта.', 'The browser blocked the microphone. Tap the lock next to the address and allow the microphone for this site.'],
+  'no-device': ['Микрофон не найден. Проверь, что он подключён и выбран в настройках системы.', 'No microphone found. Check that it is connected and selected in your system settings.'],
+  insecure: ['Микрофон работает только на https. Открой сайт по https-ссылке.', 'The microphone only works over https. Open the site with an https link.'],
+  unsupported: ['Этот браузер не даёт доступ к микрофону. Нужен Chrome, Edge или Safari посвежее.', 'This browser gives no microphone access. Use a recent Chrome, Edge or Safari.'],
+  failed: ['Не удалось включить микрофон. Закрой другие приложения, которые могут его занимать.', 'Could not turn on the microphone. Close other apps that may be using it.'],
+});
 
 export function micAvailable(): boolean {
   return (

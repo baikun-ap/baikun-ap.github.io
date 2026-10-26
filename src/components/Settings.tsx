@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AppState, DrillToggles, Profile, SessionLength } from '../lib/types';
 import { DRILL_NAMES, DRILL_BLURBS, type DrillKind } from '../lib/drill';
+import { t as tx } from '../i18n';
 import { exportState, importState } from '../lib/db';
 import { onVoicesReady, chineseVoices, speak, voiceStatus, VOICE_HELP } from '../lib/speech';
 import { micAvailable } from '../lib/pitch';
@@ -32,12 +33,12 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
   return (
     <div className="stack">
       <div>
-        <h1>Настройки</h1>
-        <p className="lede">Всё хранится только в этом браузере. Ни аккаунта, ни сервера.</p>
+        <h1>{tx('Настройки', 'Settings')}</h1>
+        <p className="lede">{tx('Всё хранится только в этом браузере. Ни аккаунта, ни сервера.', 'Everything is stored in this browser only. No account, no server.')}</p>
       </div>
 
       <section className="card">
-        <h2>Упражнения</h2>
+        <h2>{tx('Упражнения', 'Drills')}</h2>
         {(Object.keys(DRILL_NAMES) as DrillKind[]).map((k) => (
           <label key={k} className="toggle">
             <input type="checkbox" checked={profile.drills[k]} onChange={() => toggle(k)} />
@@ -48,7 +49,7 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
               {k === 'sayTone' && !micAvailable() && (
                 <>
                   <br />
-                  <span className="d" style={{ color: 'var(--bad)' }}>Микрофон в этом браузере недоступен.</span>
+                  <span className="d" style={{ color: 'var(--bad)' }}>{tx('Микрофон в этом браузере недоступен.', 'The microphone is not available in this browser.')}</span>
                 </>
               )}
             </span>
@@ -57,23 +58,23 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
       </section>
 
       <section className="card">
-        <h2>Занятие</h2>
+        <h2>{tx('Занятие', 'Session')}</h2>
         <div className="field">
-          <label htmlFor="len">Длительность</label>
+          <label htmlFor="len">{tx('Длительность', 'Length')}</label>
           <select
             id="len"
             value={profile.sessionMinutes}
             onChange={(e) => onPatch({ sessionMinutes: Number(e.target.value) as SessionLength })}
           >
             {LENGTHS.map((m) => (
-              <option key={m} value={m}>{m} минут</option>
+              <option key={m} value={m}>{m} {tx('минут', 'minutes')}</option>
             ))}
           </select>
         </div>
 
         <div className="field">
           <label htmlFor="cap">
-            Новых слогов в день: {profile.dailyNewCap === null ? 'по длительности' : profile.dailyNewCap}
+            {tx('Новых слогов в день', 'New syllables per day')}: {profile.dailyNewCap === null ? tx('по длительности', 'by session length') : profile.dailyNewCap}
           </label>
           <input
             id="cap"
@@ -90,7 +91,7 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
 
         <div className="field">
           <label htmlFor="strict">
-            Строгость оценки голоса: {Math.round(profile.sayStrictness * 100)}%
+            {tx('Строгость оценки голоса', 'Voice grading strictness')}: {Math.round(profile.sayStrictness * 100)}%
           </label>
           <input
             id="strict"
@@ -101,31 +102,31 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
             onChange={(e) => onPatch({ sayStrictness: Number(e.target.value) / 100 })}
           />
           <span className="tiny">
-            Насколько уверенно контур должен совпасть с эталоном, чтобы попытка засчиталась.
+            {tx('Насколько уверенно контур должен совпасть с эталоном, чтобы попытка засчиталась.', 'How closely the contour must match the model for an attempt to count.')}
           </span>
         </div>
       </section>
 
       <section className="card">
-        <h2>Голос</h2>
+        <h2>{tx('Голос', 'Voice')}</h2>
         <VoiceNotice />
         {voices.length > 0 ? (
           <>
             <div className="field">
-              <label htmlFor="voice">Китайский голос</label>
+              <label htmlFor="voice">{tx('Китайский голос', 'Chinese voice')}</label>
               <select
                 id="voice"
                 value={profile.ttsVoice ?? ''}
                 onChange={(e) => onPatch({ ttsVoice: e.target.value || null })}
               >
-                <option value="">Выбрать автоматически</option>
+                <option value="">{tx('Выбрать автоматически', 'Choose automatically')}</option>
                 {voices.map((v) => (
                   <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label htmlFor="rate">Скорость: {profile.ttsRate.toFixed(2)}×</label>
+              <label htmlFor="rate">{tx('Скорость', 'Rate')}: {profile.ttsRate.toFixed(2)}×</label>
               <input
                 id="rate"
                 type="range"
@@ -136,20 +137,20 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
               />
             </div>
             <button className="btn sm" onClick={() => speak('你好，我们开始学习声调', { voiceURI: profile.ttsVoice, rate: profile.ttsRate })}>
-              Проверить голос
+              {tx('Проверить голос', 'Test the voice')}
             </button>
           </>
         ) : (
-          <p className="subtle">{VOICE_HELP[voiceStatus()]}</p>
+          <p className="subtle">{VOICE_HELP()[voiceStatus()]}</p>
         )}
       </section>
 
       <section className="card">
-        <h2>Прогресс</h2>
+        <h2>{tx('Прогресс', 'Progress')}</h2>
         <div className="row">
-          <button className="btn sm" onClick={() => exportState(state)}>Выгрузить в файл</button>
+          <button className="btn sm" onClick={() => exportState(state)}>{tx('Выгрузить в файл', 'Save to file')}</button>
           <label className="btn sm" style={{ cursor: 'pointer' }}>
-            Загрузить из файла
+            {tx('Загрузить из файла', 'Load from file')}
             <input
               type="file"
               accept="application/json"
@@ -163,19 +164,19 @@ export default function Settings({ state, onPatch, onReplace, onReset }: Props) 
           </label>
         </div>
         <p className="tiny" style={{ marginTop: '.7rem' }}>
-          Карточки из прежней версии тренажёра письма перенесены как карточки чтения: интервалы
-          повторений сохранились, рисование черт больше не требуется.
+          {tx('Карточки из прежней версии тренажёра письма перенесены как карточки чтения: интервалы повторений сохранились, рисование черт больше не требуется.',
+            'Cards from the old writing trainer were moved over as reading cards: review intervals were kept, drawing strokes is no longer required.')}
         </p>
         <div className="row" style={{ marginTop: '.7rem' }}>
           {confirmReset ? (
             <>
               <button className="btn sm" style={{ borderColor: 'var(--bad)', color: 'var(--bad)' }} onClick={onReset}>
-                Да, стереть всё
+                {tx('Да, стереть всё', 'Yes, erase everything')}
               </button>
-              <button className="btn sm ghost" onClick={() => setConfirmReset(false)}>Отмена</button>
+              <button className="btn sm ghost" onClick={() => setConfirmReset(false)}>{tx('Отмена', 'Cancel')}</button>
             </>
           ) : (
-            <button className="btn sm ghost" onClick={() => setConfirmReset(true)}>Сбросить прогресс</button>
+            <button className="btn sm ghost" onClick={() => setConfirmReset(true)}>{tx('Сбросить прогресс', 'Reset progress')}</button>
           )}
         </div>
       </section>

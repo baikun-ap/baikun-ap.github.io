@@ -29,7 +29,7 @@ async function fakeGitHub(route) {
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const fails = []; const check = (ok, msg) => { console.log(ok ? 'ok  ' : 'FAIL', msg); if (!ok) fails.push(msg); };
 async function device() {
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' });
   await ctx.route('https://api.github.com/**', fakeGitHub);
   await ctx.route('https://d8j0ntlcm91z4.cloudfront.net/**', (r) => r.fulfill({ status: 404 }));
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', (e) => errors.push(e.message));

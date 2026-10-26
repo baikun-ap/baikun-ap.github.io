@@ -7,13 +7,14 @@ import { Py, Say, StrokeBox, VoiceWarning, go, useCourseCtx } from './ui';
 import { listen, listenSupported, scoreSpeech, hanOnly, type Match } from './listen';
 import CardReview from './CardReview';
 import { cardIdOf, dueCards } from './store';
+import { L as tr, t } from '../i18n';
 
 export default function Lesson({ id, step }: { id: string; step: number }) {
   const lesson = LESSON_BY_ID.get(id);
   const { state, actions } = useCourseCtx();
   const s = Math.min(8, Math.max(1, step || 1));
   useEffect(() => { if (lesson) actions.visit(lesson.id, s); }, [lesson, s, actions]);
-  if (!lesson) return <div className="page"><p>Урок не найден.</p><a className="btn" href="#/course">К курсу</a></div>;
+  if (!lesson) return <div className="page"><p>{t('Урок не найден.', 'Lesson not found.')}</p><a className="btn" href="#/course">{t('К курсу', 'To the course')}</a></div>;
 
   const prog = state.lessons[lesson.id];
   const done = new Set(prog?.steps ?? []);
@@ -25,32 +26,32 @@ export default function Lesson({ id, step }: { id: string; step: number }) {
   return (
     <div className="page lesson">
       <header className="lesson-head">
-        <a className="back" href="#/course">← {bookOf(lesson).title}</a>
+        <a className="back" href="#/course">← {tr(bookOf(lesson).title)}</a>
         <div className="lesson-title">
-          <span className="lesson-n">Урок {lesson.n}</span>
-          <h1><span className="zh">{lesson.titleZh}</span> <span className="serif">{lesson.title}</span></h1>
-          <p className="muted">{lesson.goal}</p>
+          <span className="lesson-n">{t('Урок', 'Lesson')} {lesson.n}</span>
+          <h1><span className="zh">{lesson.titleZh}</span> <span className="serif">{tr(lesson.title)}</span></h1>
+          <p className="muted">{tr(lesson.goal)}</p>
         </div>
-        <nav className="steps" aria-label="Шаги урока">
+        <nav className="steps" aria-label={t('Шаги урока', 'Lesson steps')}>
           {STEPS.map((st) => (
             <a key={st.n} href={`#/lesson/${lesson.id}/${st.n}`} className={`step ${st.n === s ? 'cur' : ''} ${done.has(st.n) ? 'done' : ''}`}
               aria-current={st.n === s ? 'step' : undefined}>
               <span className="step-zh">{done.has(st.n) && st.n !== s ? '✓' : st.zh}</span>
-              <span className="step-t">{st.short}</span>
+              <span className="step-t">{t(st.short, st.enShort)}</span>
             </a>
           ))}
         </nav>
       </header>
 
       <section className="panel step-body" key={`${lesson.id}-${s}`}>
-        <h2 className="step-h"><span className="step-num">{s}</span>{STEPS[s - 1].title}</h2>
+        <h2 className="step-h"><span className="step-num">{s}</span>{t(STEPS[s - 1].title, STEPS[s - 1].en)}</h2>
         {s === 1 && <HanziStep lesson={lesson} onDone={() => finish()} />}
-        {s === 2 && <><p className="hint">Пиньинь — латинская запись звуков. Знак над гласной показывает тон.</p><QuizStep make={() => pinyinSet(lesson)} onDone={finish} /></>}
-        {s === 3 && <><VoiceWarning /><p className="hint">1 — ровный высокий, 2 — восходящий, 3 — вниз-вверх, 4 — резко вниз, · — нейтральный.</p><QuizStep make={() => toneSet(lesson)} onDone={finish} /></>}
+        {s === 2 && <><p className="hint">{t('Пиньинь — латинская запись звуков. Знак над гласной показывает тон.', 'Pinyin writes Chinese sounds in Latin letters. The mark above the vowel shows the tone.')}</p><QuizStep make={() => pinyinSet(lesson)} onDone={finish} /></>}
+        {s === 3 && <><VoiceWarning /><p className="hint">{t('1 — ровный высокий, 2 — восходящий, 3 — вниз-вверх, 4 — резко вниз, · — нейтральный.', '1 — high and level, 2 — rising, 3 — down then up, 4 — sharply falling, · — neutral.')}</p><QuizStep make={() => toneSet(lesson)} onDone={finish} /></>}
         {s === 4 && <><VoiceWarning /><QuizStep make={() => listenSet(lesson)} onDone={finish} /><Dialogue lesson={lesson} /></>}
         {s === 5 && <SpeakStep lesson={lesson} onDone={finish} />}
         {s === 6 && <GrammarStep lesson={lesson} onDone={finish} />}
-        {s === 7 && <QuizStep make={() => testSet(lesson)} onDone={(p) => finish(p)} label="Завершить тест" test />}
+        {s === 7 && <QuizStep make={() => testSet(lesson)} onDone={(p) => finish(p)} label={t('Завершить тест', 'Finish the test')} test />}
         {s === 8 && <CardsStep lesson={lesson} />}
       </section>
     </div>
@@ -66,9 +67,9 @@ function QuizStep({ make, onDone, label, test }: { make: () => ReturnType<typeof
     return (
       <div className="result">
         <div className="result-num bad">{score}%</div>
-        <p>Для зачёта нужно 80%. Повтори слова и попробуй ещё раз — вопросы будут другие.</p>
-        <div className="row"><button className="btn primary" onClick={() => { setScore(null); setRound(round + 1); }}>Пройти заново</button>
-          <button className="btn" onClick={() => onDone(score)}>Всё равно дальше</button></div>
+        <p>{t('Для зачёта нужно 80%. Повтори слова и попробуй ещё раз — вопросы будут другие.', 'You need 80% to pass. Review the words and try again — the questions will be different.')}</p>
+        <div className="row"><button className="btn primary" onClick={() => { setScore(null); setRound(round + 1); }}>{t('Пройти заново', 'Try again')}</button>
+          <button className="btn" onClick={() => onDone(score)}>{t('Всё равно дальше', 'Continue anyway')}</button></div>
       </div>
     );
   }
@@ -91,24 +92,24 @@ function HanziStep({ lesson, onDone }: { lesson: L; onDone: () => void }) {
         <div className="hz-main">
           <div className="zh-xxl">{w.zh}</div>
           <Py text={w.py} className="py-l" />
-          <p className="hz-ru">{w.ru}{w.note && <span className="muted"> · {w.note}</span>}</p>
+          <p className="hz-ru">{tr(w.ru)}{w.note && <span className="muted"> · {tr(w.note)}</span>}</p>
           <Say text={w.zh} big auto={i} />
         </div>
         <div className="hz-stroke">
           {chars.length > 1 && <div className="row center">{chars.map((c, k) => <button key={k} className={`chip zh ${k === ci ? 'on' : ''}`} onClick={() => setCi(k)}>{c}</button>)}</div>}
           <StrokeBox char={ch} size={190} mode={write ? 'quiz' : 'animate'} key={`${ch}-${write}`} />
-          <button className="chip" onClick={() => setWrite(!write)}>{write ? 'Смотреть порядок' : '✍ Написать самому'}</button>
+          <button className="chip" onClick={() => setWrite(!write)}>{write ? t('Смотреть порядок', 'Show stroke order') : t('✍ Написать самому', '✍ Write it yourself')}</button>
         </div>
       </div>
       <div className="dots" aria-hidden="true">{lesson.words.map((_, k) => <span key={k} className={k === i ? 'on' : k < i ? 'past' : ''} />)}</div>
       <div className="row between">
-        <button className="btn" disabled={i === 0} onClick={() => goTo(i - 1)}>← Назад</button>
-        <span className="muted small">{i + 1} из {lesson.words.length}</span>
-        {i + 1 < lesson.words.length ? <button className="btn primary" onClick={() => goTo(i + 1)}>Дальше →</button>
-          : <button className="btn primary" onClick={onDone}>Готово</button>}
+        <button className="btn" disabled={i === 0} onClick={() => goTo(i - 1)}>← {t('Назад', 'Back')}</button>
+        <span className="muted small">{i + 1} {t('из', 'of')} {lesson.words.length}</span>
+        {i + 1 < lesson.words.length ? <button className="btn primary" onClick={() => goTo(i + 1)}>{t('Дальше', 'Next')} →</button>
+          : <button className="btn primary" onClick={onDone}>{t('Готово', 'Done')}</button>}
       </div>
-      <details className="all-words"><summary>Все слова урока</summary>
-        <ul className="wordlist">{lesson.words.map((x) => <li key={x.zh}><span className="zh">{x.zh}</span><Py text={x.py} /><span>{x.ru}</span><Say text={x.zh} /></li>)}</ul>
+      <details className="all-words"><summary>{t('Все слова урока', 'All words of the lesson')}</summary>
+        <ul className="wordlist">{lesson.words.map((x) => <li key={x.zh}><span className="zh">{x.zh}</span><Py text={x.py} /><span>{tr(x.ru)}</span><Say text={x.zh} /></li>)}</ul>
       </details>
     </div>
   );
@@ -120,11 +121,11 @@ function Dialogue({ lesson }: { lesson: L }) {
   if (!lesson.dialogue.length) return null;
   return (
     <div className="dialogue">
-      <h3>Диалог урока</h3>
+      <h3>{t('Диалог урока', 'Lesson dialogue')}</h3>
       {lesson.dialogue.map((d, k) => (
         <div key={k} className={`line ${d.who === lesson.dialogue[0].who ? 'a' : 'b'}`}>
-          <span className="who">{d.who}</span>
-          <div><div className="zh">{d.zh}</div><Py text={d.py} /><div className="muted small">{d.ru}</div></div>
+          <span className="who">{tr(d.who)}</span>
+          <div><div className="zh">{d.zh}</div><Py text={d.py} /><div className="muted small">{tr(d.ru)}</div></div>
           <Say text={d.zh} />
         </div>
       ))}
@@ -165,12 +166,12 @@ function SpeakStep({ lesson, onDone }: { lesson: L; onDone: (p: number) => void 
     if (i + 1 < items.length) setI(i + 1);
     else onDone(Math.round((all.reduce((a, b) => a + b, 0) / all.length) * 100));
   };
-  if (!it) return <p className="muted">Нет материала для говорения.</p>;
+  if (!it) return <p className="muted">{t('Нет материала для говорения.', 'Nothing to practise speaking here.')}</p>;
 
   return (
     <div className="speak">
-      {!listenSupported && <p className="warn">Этот браузер не распознаёт речь. Открой сайт в Safari (iPhone) или Chrome. Пока можно оценивать себя самому.</p>}
-      <p className="hint">Послушай, потом нажми на микрофон и скажи вслух. Сайт сравнит каждый иероглиф.</p>
+      {!listenSupported && <p className="warn">{t('Этот браузер не распознаёт речь. Открой сайт в Safari (iPhone) или Chrome. Пока можно оценивать себя самому.', 'This browser cannot recognise speech. Open the site in Safari (iPhone) or Chrome. For now you can grade yourself.')}</p>}
+      <p className="hint">{t('Послушай, потом нажми на микрофон и скажи вслух. Сайт сравнит каждый иероглиф.', 'Listen, then tap the microphone and say it out loud. The site checks every character.')}</p>
       <div className="speak-card">
         <div className="muted small">{i + 1} / {items.length}</div>
         <div className="zh-l speak-zh">
@@ -185,12 +186,12 @@ function SpeakStep({ lesson, onDone }: { lesson: L; onDone: (p: number) => void 
           })()}
         </div>
         <Py text={it.py} className="py-l" />
-        <p className="muted">{it.ru}</p>
+        <p className="muted">{tr(it.ru)}</p>
         <div className="row center">
-          <Say text={it.zh} label="Образец" />
-          <button className={`mic ${rec ? 'rec' : ''}`} onClick={start} disabled={rec || !listenSupported} aria-label="Говорить">
+          <Say text={it.zh} label={t('Образец', 'Model')} />
+          <button className={`mic ${rec ? 'rec' : ''}`} onClick={start} disabled={rec || !listenSupported} aria-label={t('Говорить', 'Speak')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-            {rec ? 'Слушаю…' : 'Сказать'}
+            {rec ? t('Слушаю…', 'Listening…') : t('Сказать', 'Speak')}
           </button>
         </div>
         {rec && interim && <p className="heard">{interim}</p>}
@@ -198,16 +199,16 @@ function SpeakStep({ lesson, onDone }: { lesson: L; onDone: (p: number) => void 
         {res && (
           <div className={`speak-res ${res.score >= 0.8 ? 'ok' : res.score >= 0.5 ? 'mid' : 'bad'}`}>
             <b>{Math.round(res.score * 100)}%</b>
-            <span>{res.score >= 0.8 ? 'Отлично, тебя поняли!' : res.score >= 0.5 ? 'Почти. Послушай образец и повтори.' : 'Пока непохоже — попробуй ещё раз, медленнее.'}</span>
-            <span className="muted small">Распознано: <span className="zh">{res.heard || '—'}</span></span>
+            <span>{res.score >= 0.8 ? t('Отлично, тебя поняли!', 'Great, you were understood!') : res.score >= 0.5 ? t('Почти. Послушай образец и повтори.', 'Almost. Listen to the model and repeat.') : t('Пока непохоже — попробуй ещё раз, медленнее.', 'Not quite yet — try again, more slowly.')}</span>
+            <span className="muted small">{t('Распознано', 'Heard')}: <span className="zh">{res.heard || '—'}</span></span>
           </div>
         )}
       </div>
       <div className="row between">
-        {listenSupported ? <button className="btn" onClick={() => next(0)}>Пропустить</button>
-          : <button className="btn" onClick={() => next(0.5)}>Сказал(а) не очень</button>}
-        {listenSupported ? <button className="btn primary" disabled={!res} onClick={() => next(res?.score ?? 0)}>Дальше →</button>
-          : <button className="btn primary" onClick={() => next(1)}>Сказал(а) хорошо</button>}
+        {listenSupported ? <button className="btn" onClick={() => next(0)}>{t('Пропустить', 'Skip')}</button>
+          : <button className="btn" onClick={() => next(0.5)}>{t('Сказал(а) не очень', 'Not so well')}</button>}
+        {listenSupported ? <button className="btn primary" disabled={!res} onClick={() => next(res?.score ?? 0)}>{t('Дальше', 'Next')} →</button>
+          : <button className="btn primary" onClick={() => next(1)}>{t('Сказал(а) хорошо', 'Said it well')}</button>}
       </div>
     </div>
   );
@@ -218,13 +219,13 @@ function SpeakStep({ lesson, onDone }: { lesson: L; onDone: (p: number) => void 
 export function GrammarCard({ g }: { g: L['grammar'][number] }) {
   return (
     <article className="gram">
-      <h3>{g.title}</h3>
-      <div className="formula">{g.formula}</div>
-      <p>{g.explain}</p>
+      <h3>{tr(g.title)}</h3>
+      <div className="formula">{tr(g.formula)}</div>
+      <p>{tr(g.explain)}</p>
       <ul className="examples">{g.examples.map((e, k) => (
-        <li key={k}><div><span className="zh">{e.zh.join('')}</span> <Py text={e.py} /><div className="muted small">{e.ru}</div></div><Say text={e.zh.join('')} /></li>
+        <li key={k}><div><span className="zh">{e.zh.join('')}</span> <Py text={e.py} /><div className="muted small">{tr(e.ru)}</div></div><Say text={e.zh.join('')} /></li>
       ))}</ul>
-      {g.pitfall && <div className="pitfall"><div><s className="zh">{g.pitfall.wrong}</s> → <b className="zh">{g.pitfall.right}</b></div><div className="small muted">{g.pitfall.why}</div></div>}
+      {g.pitfall && <div className="pitfall"><div><s className="zh">{tr(g.pitfall.wrong)}</s> → <b className="zh">{tr(g.pitfall.right)}</b></div><div className="small muted">{tr(g.pitfall.why)}</div></div>}
     </article>
   );
 }
@@ -236,7 +237,7 @@ function GrammarStep({ lesson, onDone }: { lesson: L; onDone: (p: number) => voi
   return (
     <div>
       {lesson.grammar.map((g) => <GrammarCard key={g.id} g={g} />)}
-      <div className="row end"><button className="btn primary" onClick={() => (qs.length ? setPractice(true) : onDone(100))}>Практика: собери фразы →</button></div>
+      <div className="row end"><button className="btn primary" onClick={() => (qs.length ? setPractice(true) : onDone(100))}>{t('Практика: собери фразы', 'Practice: build sentences')} →</button></div>
     </div>
   );
 }
@@ -254,14 +255,14 @@ function CardsStep({ lesson }: { lesson: L }) {
   useEffect(() => { if (added && !due.length) actions.completeStep(lesson.id, 8); }, [added, due.length, lesson.id, actions]);
   return (
     <div>
-      <p className="hint">Все {lesson.words.length} слов урока добавлены в твою колоду. Карточки будут возвращаться по графику: трудные — чаще, лёгкие — реже.</p>
+      <p className="hint">{t(`Все ${lesson.words.length} слов урока добавлены в твою колоду. Карточки будут возвращаться по графику: трудные — чаще, лёгкие — реже.`, `All ${lesson.words.length} words of the lesson are in your deck. Cards come back on a schedule: hard ones more often, easy ones less.`)}</p>
       {due.length ? <CardReview cards={due} /> : (
         <div className="result">
           <div className="result-num">✓</div>
-          <p>Урок пройден! Новые карточки появятся в разделе «Карточки» в нужный день.</p>
+          <p>{t('Урок пройден! Новые карточки появятся в разделе «Карточки» в нужный день.', 'Lesson complete! Your cards will show up under Flashcards when they are due.')}</p>
           <div className="row center">
-            <a className="btn" href="#/course">К курсу</a>
-            {nl ? <a className="btn primary" href={`#/lesson/${nl.id}/1`}>Следующий урок →</a> : <a className="btn primary" href="#/cards">К карточкам</a>}
+            <a className="btn" href="#/course">{t('К курсу', 'To the course')}</a>
+            {nl ? <a className="btn primary" href={`#/lesson/${nl.id}/1`}>{t('Следующий урок', 'Next lesson')} →</a> : <a className="btn primary" href="#/cards">{t('К карточкам', 'To flashcards')}</a>}
           </div>
         </div>
       )}

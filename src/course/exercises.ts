@@ -105,7 +105,7 @@ function buildQ(s: Sentence): Question | null {
   if (order.length < 2) return null;
   let tokens = shuffle(order);
   for (let k = 0; k < 5 && tokens.join('') === order.join(''); k++) tokens = shuffle(order);
-  return { kind: 'build', ru: s.ru.replace(/\s*\([^)]*\)/g, ''), tokens, order, py: s.py, say: s.zh.join('') };
+  return { kind: 'build', ru: s.ru, tokens, order, py: s.py, say: s.zh.join('') };
 }
 
 /** Wider pool so distractors exist even in a lesson with few words. */

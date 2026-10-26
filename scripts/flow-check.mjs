@@ -15,7 +15,7 @@ const server = createServer((req, res) => {
   catch { res.writeHead(404); res.end(); }
 }).listen(4176);
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const page = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' })).newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.route('https://d8j0ntlcm91z4.cloudfront.net/**', (r) => r.fulfill({ status: 404 }));

@@ -14,6 +14,7 @@ import type { SyllableEntry } from './syllables';
 import { BY_CHAR, BY_ID, SYLLABLES, distractors, BY_BASE } from './syllables';
 import { dueCards, newCard } from './srs';
 import { today } from './date';
+import { tr } from '../i18n';
 
 export type DrillKind = keyof DrillToggles;
 
@@ -221,16 +222,16 @@ export function ensureCard(state: AppState, drill: Drill, day = today()): CardSt
   return drill.kind === 'readPinyin' ? newCard('read', drill.char, day) : newCard('tone', drill.syllable.id, day);
 }
 
-export const DRILL_NAMES: Record<DrillKind, string> = {
-  hearTone: 'Какой тон',
-  minimalPair: 'Минимальные пары',
-  sayTone: 'Произнести',
-  readPinyin: 'Чтение иероглифа',
-};
+export const DRILL_NAMES: Record<DrillKind, string> = tr({
+  hearTone: ['Какой тон', 'Which tone'],
+  minimalPair: ['Минимальные пары', 'Minimal pairs'],
+  sayTone: ['Произнести', 'Say it'],
+  readPinyin: ['Чтение иероглифа', 'Read the character'],
+});
 
-export const DRILL_BLURBS: Record<DrillKind, string> = {
-  hearTone: 'Слушаешь слог и определяешь тон. Основа всего остального.',
-  minimalPair: 'Один и тот же слог в разных тонах: mā или mǎ. Самое тонкое различение.',
-  sayTone: 'Произносишь вслух, микрофон рисует контур твоего голоса и сравнивает с эталоном.',
-  readPinyin: 'Видишь иероглиф — выбираешь его чтение. Без письма.',
-};
+export const DRILL_BLURBS: Record<DrillKind, string> = tr({
+  hearTone: ['Слушаешь слог и определяешь тон. Основа всего остального.', 'Hear a syllable and name its tone. The base for everything else.'],
+  minimalPair: ['Один и тот же слог в разных тонах: mā или mǎ. Самое тонкое различение.', 'The same syllable in different tones: mā or mǎ. The finest distinction.'],
+  sayTone: ['Произносишь вслух, микрофон рисует контур твоего голоса и сравнивает с эталоном.', 'Say it out loud; the microphone draws the contour of your voice and compares it with the model.'],
+  readPinyin: ['Видишь иероглиф — выбираешь его чтение. Без письма.', 'See a character, pick its reading. No writing.'],
+});

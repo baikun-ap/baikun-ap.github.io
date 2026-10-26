@@ -21,7 +21,7 @@ const routes = ['', 'course', 'lesson/starter-1/1', 'lesson/starter-1/2', 'lesso
 const only = process.env.ONLY;
 let fail = 0;
 for (const [w, h] of [[390, 844], [1440, 900]]) {
-  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, locale: process.env.LOCALE ?? 'ru-RU' });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));

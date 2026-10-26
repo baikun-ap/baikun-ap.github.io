@@ -12,6 +12,7 @@ import type { CourseState } from './store';
 import { mergeCourse, pickTones } from './cloud';
 import { loadState, saveState } from '../lib/db';
 import type { AppState } from '../lib/types';
+import { t } from '../i18n';
 
 const TOKEN_KEY = 'baikun-gh-token';
 const GIST_KEY = 'baikun-gh-gist';
@@ -29,9 +30,9 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}): Promi
     ...init,
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
   });
-  if (r.status === 401) throw new Error('Ключ не подходит или истёк. Создай новый и подключи заново.');
-  if (r.status === 403 || r.status === 404) throw new Error('У ключа нет доступа к Gist. При создании ключа отметь право «gist».');
-  if (!r.ok) throw new Error(`GitHub ответил ошибкой ${r.status}.`);
+  if (r.status === 401) throw new Error(t('Ключ не подходит или истёк. Создай новый и подключи заново.', 'The token is invalid or expired. Create a new one and connect again.'));
+  if (r.status === 403 || r.status === 404) throw new Error(t('У ключа нет доступа к Gist. При создании ключа отметь право «gist».', 'The token has no Gist access. Tick the “gist” scope when you create it.'));
+  if (!r.ok) throw new Error(t(`GitHub ответил ошибкой ${r.status}.`, `GitHub returned error ${r.status}.`));
   return r.json() as Promise<T>;
 }
 

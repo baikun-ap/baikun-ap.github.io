@@ -35,13 +35,13 @@ export const ALL_GRAMMAR: (GrammarPoint & { lesson: Lesson })[] = LESSONS.flatMa
 
 /** The eight steps every lesson walks through, in order. */
 export const STEPS = [
-  { n: 1, key: 'hanzi', title: 'Иероглифы', short: 'Знаки', zh: '字' },
-  { n: 2, key: 'pinyin', title: 'Пиньинь', short: 'Пиньинь', zh: '拼' },
-  { n: 3, key: 'tones', title: 'Тоны', short: 'Тоны', zh: '声' },
-  { n: 4, key: 'listen', title: 'Аудирование', short: 'Слух', zh: '听' },
-  { n: 5, key: 'speak', title: 'Говорение', short: 'Голос', zh: '说' },
-  { n: 6, key: 'grammar', title: 'Грамматика', short: 'Грамм.', zh: '法' },
-  { n: 7, key: 'test', title: 'Тест', short: 'Тест', zh: '考' },
-  { n: 8, key: 'cards', title: 'Карточки', short: 'Карты', zh: '卡' },
+  { n: 1, key: 'hanzi', title: 'Иероглифы', short: 'Знаки', en: 'Characters', enShort: 'Chars', zh: '字' },
+  { n: 2, key: 'pinyin', title: 'Пиньинь', short: 'Пиньинь', en: 'Pinyin', enShort: 'Pinyin', zh: '拼' },
+  { n: 3, key: 'tones', title: 'Тоны', short: 'Тоны', en: 'Tones', enShort: 'Tones', zh: '声' },
+  { n: 4, key: 'listen', title: 'Аудирование', short: 'Слух', en: 'Listening', enShort: 'Listen', zh: '听' },
+  { n: 5, key: 'speak', title: 'Говорение', short: 'Голос', en: 'Speaking', enShort: 'Speak', zh: '说' },
+  { n: 6, key: 'grammar', title: 'Грамматика', short: 'Грамм.', en: 'Grammar', enShort: 'Grammar', zh: '法' },
+  { n: 7, key: 'test', title: 'Тест', short: 'Тест', en: 'Test', enShort: 'Test', zh: '考' },
+  { n: 8, key: 'cards', title: 'Карточки', short: 'Карты', en: 'Flashcards', enShort: 'Cards', zh: '卡' },
 ] as const;
 export type StepN = (typeof STEPS)[number]['n'];

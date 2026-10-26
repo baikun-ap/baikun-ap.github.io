@@ -352,11 +352,12 @@
       <div class="navrow">
         <a class="logo" href="./">bai<i>.kun</i></a>
         <nav class="links" id="site-nav">
-          <a href="app/#/course" aria-current="page">Курс</a>
-          <a href="app/#/hanzi">Иероглифы</a>
-          <a href="app/#/tones">Тоны</a>
-          <a href="app/#/cards">Карточки</a>
-          <a class="enroll" href="app/#/">Начать</a>
+          <a href="app/#/course" aria-current="page" data-en="Course">Курс</a>
+          <a href="app/#/hanzi" data-en="Characters">Иероглифы</a>
+          <a href="app/#/tones" data-en="Tones">Тоны</a>
+          <a href="app/#/cards" data-en="Cards">Карточки</a>
+          <a href="#" class="lang-switch" role="button" lang="en">EN</a>
+          <a class="enroll" href="app/#/" data-en="Start">Начать</a>
         </nav>
         <button class="burger" type="button" aria-label="Open navigation"
                 aria-expanded="false" aria-controls="site-nav">
@@ -381,14 +382,14 @@
           <img data-planet="venus" alt="" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202012_640b239a-d08a-4200-adb2-741bbe129ac8.png">
           <img data-planet="mars" alt="" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202018_3d559490-f613-4ed7-a3bb-3b7e9fc90fb8.png">
         </button>
-        <a href="app/#/course">НАЧАТЬ</a>
+        <a href="app/#/course" data-en="START">НАЧАТЬ</a>
         <span class="label label-l"></span>
         <span class="label label-r"></span>
       </div>
     </div>
   </div>
 
-  <button class="scroll" type="button" aria-label="Перейти к курсу">
+  <button class="scroll" type="button" aria-label="Перейти к курсу" data-en-label="Go to the course">
     <svg viewBox="0 0 26 33" fill="none" aria-hidden="true">
       <path d="M13 1.5 V31.5 M1.9 20.4 L13 31.5 L24.1 20.4" stroke="#ffffff"
             stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"/>
@@ -417,20 +418,32 @@
   /* ---------- planet switcher ---------- */
   var BASE = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/';
   var ORDER = ['earth', 'venus', 'mars'];
-  var TAIL = ' Начни первый урок сегодня — бесплатно, прямо в браузере.';
+  /* Russian or English, shared with the app through localStorage. */
+  var LANG = (function(){
+    try { var s = localStorage.getItem('baikun-lang'); if (s === 'ru' || s === 'en') return s; } catch (e) {}
+    var n = ((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase();
+    return /^(ru|uk|be|kk|ky|uz|tg)/.test(n) ? 'ru' : 'en';
+  })();
+  var TAIL = {
+    ru: ' Начни первый урок сегодня — бесплатно, прямо в браузере.',
+    en: ' Start your first lesson today — free, right in your browser.'
+  };
   var PLANETS = {
-    earth: { name: '地球', eyebrow: 'DÌQIÚ · ЗЕМЛЯ', label: '地球 ЗЕМЛЯ', href: 'app/#/course',
+    earth: { name: '地球', href: 'app/#/course',
       cut: BASE + 'hf_20260827_202005_3346cc4d-ec3b-44ab-825c-b18e49f5021a.png',
       still: BASE + 'hf_20260827_202133_508c64b8-a31e-4290-bdfc-1187df70e0a6.png',
-      lede: '地 — земля, 球 — шар. Мир иероглифов: уроки по учебникам, порядок черт <br>и словарь из 800 знаков.' + TAIL },
-    venus: { name: '金星', eyebrow: 'JĪNXĪNG · ВЕНЕРА', label: '金星 ВЕНЕРА', href: 'app/#/pinyin',
+      ru: { eyebrow: 'DÌQIÚ · ЗЕМЛЯ', label: '地球 ЗЕМЛЯ', lede: '地 — земля, 球 — шар. Мир иероглифов: уроки по учебникам, порядок черт <br>и словарь из 800 знаков.' },
+      en: { eyebrow: 'DÌQIÚ · EARTH', label: '地球 EARTH', lede: '地 — earth, 球 — ball. The world of characters: textbook lessons, stroke order <br>and a dictionary of 800 characters.' } },
+    venus: { name: '金星', href: 'app/#/pinyin',
       cut: BASE + 'hf_20260827_202012_640b239a-d08a-4200-adb2-741bbe129ac8.png',
       still: BASE + 'hf_20260827_202133_cf55d1d8-7b59-4a64-80da-d72052ae974e.png',
-      lede: '金 — золото, 星 — звезда. Мир звука: пиньинь, четыре тона, аудирование <br>и микрофон, который слышит твой голос.' + TAIL },
-    mars: { name: '火星', eyebrow: 'HUǑXĪNG · МАРС', label: '火星 МАРС', href: 'app/#/grammar',
+      ru: { eyebrow: 'JĪNXĪNG · ВЕНЕРА', label: '金星 ВЕНЕРА', lede: '金 — золото, 星 — звезда. Мир звука: пиньинь, четыре тона, аудирование <br>и микрофон, который слышит твой голос.' },
+      en: { eyebrow: 'JĪNXĪNG · VENUS', label: '金星 VENUS', lede: '金 — gold, 星 — star. The world of sound: pinyin, the four tones, listening <br>and a microphone that hears your voice.' } },
+    mars: { name: '火星', href: 'app/#/grammar',
       cut: BASE + 'hf_20260827_202018_3d559490-f613-4ed7-a3bb-3b7e9fc90fb8.png',
       still: BASE + 'hf_20260827_202133_0ba6de7c-285d-43dc-b7ab-8c54c73707cb.png',
-      lede: '火 — огонь, 星 — звезда. Мир структуры: грамматика формулами, тесты <br>и карточки с интервальными повторениями.' + TAIL }
+      ru: { eyebrow: 'HUǑXĪNG · МАРС', label: '火星 МАРС', lede: '火 — огонь, 星 — звезда. Мир структуры: грамматика формулами, тесты <br>и карточки с интервальными повторениями.' },
+      en: { eyebrow: 'HUǑXĪNG · MARS', label: '火星 MARS', lede: '火 — fire, 星 — star. The world of structure: grammar as formulas, tests <br>and spaced-repetition flashcards.' } }
   };
 
   var sky = document.querySelector('.sky');
@@ -455,11 +468,11 @@
       if (on) { var p = v.play(); if (p && p.catch) p.catch(function(){}); }
       else v.pause();
     });
-    var d = PLANETS[next];
+    var d = PLANETS[next], txt = d[LANG];
     sky.style.backgroundImage = 'url(' + d.still + ')';
     title.textContent = d.name;
-    eyebrow.textContent = d.eyebrow;
-    lede.innerHTML = d.lede;
+    eyebrow.textContent = txt.eyebrow;
+    lede.innerHTML = txt.lede + TAIL[LANG];
     cta.setAttribute('href', d.href);
 
     var rest = ORDER.filter(function(p){ return p !== next; });
@@ -469,8 +482,8 @@
         img.classList.toggle('is-shown', img.dataset.planet === p);
       });
       btn.dataset.planet = p;
-      btn.setAttribute('aria-label', 'Show ' + PLANETS[p].label);
-      labels[pair[0]].textContent = PLANETS[p].label;
+      btn.setAttribute('aria-label', (LANG === 'en' ? 'Show ' : 'Показать ') + PLANETS[p][LANG].label);
+      labels[pair[0]].textContent = PLANETS[p][LANG].label;
     });
   }
 
@@ -493,7 +506,34 @@
     else setTimeout(warmAll, 2500);
   });
 
-  show('earth');
+  /* Texts outside the planet card: Russian is in the markup, English in data-en. */
+  var translatable = Array.prototype.slice.call(document.querySelectorAll('[data-en]'));
+  translatable.forEach(function(el){ el.dataset.ru = el.textContent; });
+  var scrollBtn = document.querySelector('.scroll');
+  scrollBtn.dataset.ruLabel = scrollBtn.getAttribute('aria-label');
+  var langSwitch = document.querySelector('.lang-switch');
+  var META = {
+    ru: { title: 'bai.kun (baikun) — китайский язык среди звёзд', desc: document.querySelector('meta[name="description"]').content },
+    en: { title: 'bai.kun (baikun) — learn Chinese among the stars', desc: 'bai.kun — Chinese from zero: characters, pinyin, tones, listening, speech recognition, grammar, tests and flashcards. Free, right in your browser.' }
+  };
+  function applyLang(){
+    root.lang = LANG;
+    translatable.forEach(function(el){ el.textContent = LANG === 'en' ? el.dataset.en : el.dataset.ru; });
+    scrollBtn.setAttribute('aria-label', LANG === 'en' ? scrollBtn.dataset.enLabel : scrollBtn.dataset.ruLabel);
+    langSwitch.textContent = LANG === 'en' ? 'RU' : 'EN';
+    langSwitch.lang = LANG === 'en' ? 'ru' : 'en';
+    langSwitch.setAttribute('aria-label', LANG === 'en' ? 'Русский' : 'English');
+    document.title = META[LANG].title;
+    document.querySelector('meta[name="description"]').content = META[LANG].desc;
+    var cur = featured; featured = null; show(cur || 'earth');
+  }
+  langSwitch.addEventListener('click', function(e){
+    e.preventDefault();
+    LANG = LANG === 'en' ? 'ru' : 'en';
+    try { localStorage.setItem('baikun-lang', LANG); } catch (err) {}
+    applyLang();
+  });
+  applyLang();
 
   /* ---------- scroll control: into the course ---------- */
   document.querySelector('.scroll').addEventListener('click', function(){ location.href = 'app/#/course'; });

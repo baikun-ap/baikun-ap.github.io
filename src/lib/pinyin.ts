@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 /**
  * Pinyin parsing.
  *
@@ -67,13 +68,13 @@ export function toneSequence(reading: string): Tone[] {
   return parsePinyin(reading).map((s) => s.tone);
 }
 
-export const TONE_NAMES: Record<Tone, string> = {
-  1: 'высокий ровный',
-  2: 'восходящий',
-  3: 'нисходяще-восходящий',
-  4: 'резко нисходящий',
-  5: 'нейтральный',
-};
+export const TONE_NAMES: Record<Tone, string> = tr({
+  1: ['высокий ровный', 'high and level'],
+  2: ['восходящий', 'rising'],
+  3: ['нисходяще-восходящий', 'falling-rising'],
+  4: ['резко нисходящий', 'sharply falling'],
+  5: ['нейтральный', 'neutral'],
+});
 
 /**
  * Chao pitch-level numerals: the tone written as the levels it moves between on

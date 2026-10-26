@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { onVoicesReady, speak, stopSpeaking, voiceStatus, VOICE_HELP, type VoiceStatus } from '../lib/speech';
+import { t as tx } from '../i18n';
 
 export function useVoiceStatus(): VoiceStatus {
   const [status, setStatus] = useState<VoiceStatus>(() => voiceStatus());
@@ -49,11 +50,11 @@ export default function Speaker({ text, voiceURI, rate, label, className = '', a
       className={`btn ${className}`}
       onClick={play}
       disabled={status === 'unsupported'}
-      title={status === 'ready' ? 'Прослушать' : VOICE_HELP[status]}
-      aria-label={label ?? 'Прослушать'}
+      title={status === 'ready' ? tx('Прослушать', 'Listen') : VOICE_HELP()[status]}
+      aria-label={label ?? tx('Прослушать', 'Listen')}
     >
       <SoundIcon on={playing} />
-      {label ?? 'Прослушать'}
+      {label ?? tx('Прослушать', 'Listen')}
     </button>
   );
 }
@@ -83,7 +84,7 @@ export function VoiceNotice() {
       <svg className="notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span>{VOICE_HELP[status]}</span>
+      <span>{VOICE_HELP()[status]}</span>
     </div>
   );
 }

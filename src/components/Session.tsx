@@ -4,6 +4,7 @@ import type { Drill } from '../lib/drill';
 import { planSession } from '../lib/drill';
 import { gradeChoice, gradeSpoken } from '../lib/srs';
 import { TONE_NAMES, type Tone } from '../lib/pinyin';
+import { t as tx } from '../i18n';
 import { BY_CHAR } from '../lib/syllables';
 import { gloss } from '../lib/format';
 import ToneStaff from './ToneStaff';
@@ -43,9 +44,9 @@ export default function Session({ state, onAnswer, onFinish, onExit }: Props) {
     return (
       <div className="stack">
         <div className="card">
-          <h2>На сегодня всё</h2>
-          <p className="subtle">Повторений не осталось, а новые слоги закончились в настройках. Вернись завтра или подними дневной лимит.</p>
-          <button className="btn" onClick={onExit}>На главную</button>
+          <h2>{tx('На сегодня всё', 'That is all for today')}</h2>
+          <p className="subtle">{tx('Повторений не осталось, а новые слоги закончились в настройках. Вернись завтра или подними дневной лимит.', 'No reviews left and the daily limit for new syllables is used up. Come back tomorrow or raise the limit.')}</p>
+          <button className="btn" onClick={onExit}>{tx('На главную', 'Back')}</button>
         </div>
       </div>
     );
@@ -56,11 +57,11 @@ export default function Session({ state, onAnswer, onFinish, onExit }: Props) {
     return (
       <div className="stack">
         <div className="card">
-          <p className="eyebrow">Занятие закончено</p>
-          <h1>{tally.right} из {tally.seen}</h1>
-          <p className="subtle">Точность {pct}%. Новых слогов за сессию: {plan.introduced.length}.</p>
+          <p className="eyebrow">{tx('Занятие закончено', 'Session complete')}</p>
+          <h1>{tally.right} {tx('из', 'of')} {tally.seen}</h1>
+          <p className="subtle">{tx(`Точность ${pct}%. Новых слогов за сессию: ${plan.introduced.length}.`, `Accuracy ${pct}%. New syllables this session: ${plan.introduced.length}.`)}</p>
           <div className="row" style={{ marginTop: '1rem' }}>
-            <button className="btn primary" onClick={onExit}>На главную</button>
+            <button className="btn primary" onClick={onExit}>{tx('На главную', 'Back')}</button>
           </div>
         </div>
       </div>
@@ -77,7 +78,7 @@ export default function Session({ state, onAnswer, onFinish, onExit }: Props) {
   return (
     <div className="stage">
       <div className="stage-head">
-        <button className="btn ghost sm" onClick={onExit}>← Выйти</button>
+        <button className="btn ghost sm" onClick={onExit}>← {tx('Выйти', 'Exit')}</button>
         <div className="progress-track" role="progressbar" aria-valuenow={i} aria-valuemin={0} aria-valuemax={plan.drills.length}>
           <div className="progress-fill" style={{ width: `${(i / plan.drills.length) * 100}%` }} />
         </div>
@@ -150,7 +151,7 @@ function DrillHint({ text }: { text: string }) {
   return <p className="eyebrow" style={{ textAlign: 'center' }}>{text}</p>;
 }
 
-function NextButton({ onNext, label = 'Дальше' }: { onNext: () => void; label?: string }) {
+function NextButton({ onNext, label = tx('Дальше', 'Next') }: { onNext: () => void; label?: string }) {
   return (
     <div className="row" style={{ justifyContent: 'center' }}>
       <button className="btn primary" onClick={onNext} autoFocus>{label} →</button>
@@ -174,14 +175,14 @@ function HearTone({ drill, state, answered, onPick, onNext }: StageProps<Extract
 
   return (
     <>
-      <DrillHint text="Послушай и определи тон" />
+      <DrillHint text={tx('Послушай и определи тон', 'Listen and name the tone')} />
       <div className="prompt">
         <Speaker
           text={drill.char}
           voiceURI={profile.ttsVoice}
           rate={profile.ttsRate}
           autoPlayKey={drill.cardId}
-          label="Ещё раз"
+          label={tx('Ещё раз', 'Again')}
           className="big"
         />
         {answered && (
@@ -204,7 +205,7 @@ function HearTone({ drill, state, answered, onPick, onNext }: StageProps<Extract
               disabled={Boolean(answered)}
               onClick={() => onPick(String(t), performance.now() - start.current)}
             >
-              <ToneStaff size="glyph" tone={t as Tone} solo label={`Тон ${t}`} />
+              <ToneStaff size="glyph" tone={t as Tone} solo label={`${tx('Тон', 'Tone')} ${t}`} />
               <span className="n">{t}</span>
               <span className="name">{TONE_NAMES[t as Tone]}</span>
             </button>
@@ -223,17 +224,17 @@ function MinimalPair({ drill, state, answered, onPick, onNext }: StageProps<Extr
 
   return (
     <>
-      <DrillHint text={`Один слог — разные тоны. Что прозвучало?`} />
+      <DrillHint text={tx('Один слог — разные тоны. Что прозвучало?', 'One syllable, different tones. Which one was it?')} />
       <div className="prompt">
         <Speaker
           text={drill.char}
           voiceURI={profile.ttsVoice}
           rate={profile.ttsRate}
           autoPlayKey={drill.cardId}
-          label="Ещё раз"
+          label={tx('Ещё раз', 'Again')}
           className="big"
         />
-        <p className="tiny" style={{ margin: 0 }}>основа «{drill.syllable.base}»</p>
+        <p className="tiny" style={{ margin: 0 }}>{tx('основа', 'base')} «{drill.syllable.base}»</p>
       </div>
 
       <div className="choices">
@@ -267,7 +268,7 @@ function ReadPinyin({ drill, state, answered, onPick, onNext }: StageProps<Extra
 
   return (
     <>
-      <DrillHint text="Как читается этот иероглиф?" />
+      <DrillHint text={tx('Как читается этот иероглиф?', 'How is this character read?')} />
       <div className="prompt">
         <div className="prompt-char zh">{drill.char}</div>
         {answered && h && <p className="prompt-gloss">{gloss(h)}</p>}
@@ -295,7 +296,7 @@ function ReadPinyin({ drill, state, answered, onPick, onNext }: StageProps<Extra
       {answered && (
         <>
           <div className="row" style={{ justifyContent: 'center' }}>
-            <Speaker text={drill.char} voiceURI={state.profile.ttsVoice} rate={state.profile.ttsRate} label="Послушать" className="ghost sm" />
+            <Speaker text={drill.char} voiceURI={state.profile.ttsVoice} rate={state.profile.ttsRate} label={tx('Послушать', 'Listen')} className="ghost sm" />
           </div>
           <NextButton onNext={onNext} />
         </>
@@ -320,12 +321,12 @@ function SayStage({
 
   return (
     <>
-      <DrillHint text="Произнеси вслух" />
+      <DrillHint text={tx('Произнеси вслух', 'Say it out loud')} />
       <div className="prompt">
         <div className={`prompt-char zh sm tone-${drill.syllable.tone}`}>{drill.char}</div>
         <div className={`prompt-py py tone-${drill.syllable.tone}`}>{drill.syllable.marked}</div>
         {h && <p className="prompt-gloss">{gloss(h)}</p>}
-        <Speaker text={drill.char} voiceURI={state.profile.ttsVoice} rate={state.profile.ttsRate} label="Как звучит" className="ghost sm" />
+        <Speaker text={drill.char} voiceURI={state.profile.ttsVoice} rate={state.profile.ttsRate} label={tx('Как звучит', 'How it sounds')} className="ghost sm" />
       </div>
 
       <SayTone
@@ -339,7 +340,7 @@ function SayStage({
         }}
       />
 
-      <NextButton onNext={onNext} label={attempted ? 'Дальше' : 'Пропустить'} />
+      <NextButton onNext={onNext} label={attempted ? tx('Дальше', 'Next') : tx('Пропустить', 'Skip')} />
     </>
   );
 }

@@ -8,6 +8,7 @@
 import { BY_CHAR } from '../lib/syllables';
 import { WORD_BY_ZH } from './data';
 import { stripTone } from '../lib/pinyin';
+import { t } from '../i18n';
 
 interface RecognitionResultLike { 0: { transcript: string }; length: number; isFinal: boolean; [i: number]: { transcript: string } }
 interface RecognitionEventLike { results: ArrayLike<RecognitionResultLike> }
@@ -34,18 +35,18 @@ export interface ListenHandlers {
   onEnd: () => void;
 }
 
-const ERRORS: Record<string, string> = {
-  'not-allowed': 'Нет доступа к микрофону. Разреши микрофон для этого сайта в настройках браузера.',
-  'service-not-allowed': 'Распознавание выключено. На iPhone: Настройки → Siri → включи «Диктовка» (или «Siri и Диктовка»).',
-  'no-speech': 'Ничего не услышал. Нажми и скажи погромче.',
-  'audio-capture': 'Микрофон не найден.',
-  network: 'Нет связи с сервисом распознавания. Проверь интернет.',
+const ERRORS = (): Record<string, string> => ({
+  'not-allowed': t('Нет доступа к микрофону. Разреши микрофон для этого сайта в настройках браузера.', 'No access to the microphone. Allow the microphone for this site in your browser settings.'),
+  'service-not-allowed': t('Распознавание выключено. На iPhone: Настройки → Siri → включи «Диктовка» (или «Siri и Диктовка»).', 'Speech recognition is off. On iPhone: Settings → Siri → turn on Dictation (or “Siri & Dictation”).'),
+  'no-speech': t('Ничего не услышал. Нажми и скажи погромче.', 'Heard nothing. Tap and speak a bit louder.'),
+  'audio-capture': t('Микрофон не найден.', 'No microphone found.'),
+  network: t('Нет связи с сервисом распознавания. Проверь интернет.', 'Cannot reach the recognition service. Check your connection.'),
   aborted: '',
-};
+});
 
 /** Starts listening once; returns a stop function. */
 export function listen(h: ListenHandlers): () => void {
-  if (!Recognition) { h.onError('Этот браузер не умеет распознавать речь. Открой сайт в Safari или Chrome.'); h.onEnd(); return () => {}; }
+  if (!Recognition) { h.onError(t('Этот браузер не умеет распознавать речь. Открой сайт в Safari или Chrome.', 'This browser cannot recognise speech. Open the site in Safari or Chrome.')); h.onEnd(); return () => {}; }
   const r = new Recognition();
   r.lang = 'zh-CN';
   r.interimResults = true;
@@ -62,9 +63,9 @@ export function listen(h: ListenHandlers): () => void {
       h.onFinal(alts);
     } else h.onInterim?.(res[0].transcript);
   };
-  r.onerror = (e) => { const m = ERRORS[e.error] ?? `Ошибка распознавания: ${e.error}`; if (m) h.onError(m); };
+  r.onerror = (e) => { const m = ERRORS()[e.error] ?? t(`Ошибка распознавания: ${e.error}`, `Recognition error: ${e.error}`); if (m) h.onError(m); };
   r.onend = () => { if (!finished) h.onFinal([]); h.onEnd(); };
-  try { r.start(); } catch { h.onError('Не удалось включить микрофон.'); h.onEnd(); }
+  try { r.start(); } catch { h.onError(t('Не удалось включить микрофон.', 'Could not turn on the microphone.')); h.onEnd(); }
   return () => { try { r.stop(); } catch { /* already stopped */ } };
 }
 

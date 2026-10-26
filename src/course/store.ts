@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { get, set } from 'idb-keyval';
 import { addDays, today } from '../lib/date';
 import type { Word } from '../content/schema';
+import { t } from '../i18n';
 
 /**
  * Course progress: which lesson steps are done, the flashcard deck, the
@@ -89,11 +90,11 @@ function saveCourse(s: CourseState) {
 /* ---------- spaced repetition (SM-2 with four buttons) ---------- */
 
 export type Grade = 1 | 3 | 4 | 5; // Снова, Трудно, Хорошо, Легко
-export const GRADES: { g: Grade; label: string; key: string }[] = [
-  { g: 1, label: 'Снова', key: '1' },
-  { g: 3, label: 'Трудно', key: '2' },
-  { g: 4, label: 'Хорошо', key: '3' },
-  { g: 5, label: 'Легко', key: '4' },
+export const GRADES: { g: Grade; label: string; en: string; key: string }[] = [
+  { g: 1, label: 'Снова', en: 'Again', key: '1' },
+  { g: 3, label: 'Трудно', en: 'Hard', key: '2' },
+  { g: 4, label: 'Хорошо', en: 'Good', key: '3' },
+  { g: 5, label: 'Легко', en: 'Easy', key: '4' },
 ];
 
 export function scheduleCard(c: WordCard, q: Grade, day = today()): WordCard {
@@ -114,10 +115,10 @@ export function scheduleCard(c: WordCard, q: Grade, day = today()): WordCard {
 /** "через 3 дн." — what each button would do, shown under it. */
 export function previewInterval(c: WordCard, q: Grade): string {
   const d = scheduleCard(c, q).interval;
-  if (d === 0) return 'сегодня';
-  if (d < 30) return `${d} дн.`;
-  if (d < 365) return `${Math.round(d / 30)} мес.`;
-  return '1 год';
+  if (d === 0) return t('сегодня', 'today');
+  if (d < 30) return t(`${d} дн.`, `${d} d`);
+  if (d < 365) return t(`${Math.round(d / 30)} мес.`, `${Math.round(d / 30)} mo`);
+  return t('1 год', '1 yr');
 }
 
 export const cardIdOf = (zh: string) => `w:${zh}`;

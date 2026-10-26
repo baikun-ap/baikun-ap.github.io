@@ -6,6 +6,7 @@ import { speak, stopSpeaking } from '../lib/speech';
 import { useVoiceStatus } from '../components/Speaker';
 import { VOICE_HELP } from '../lib/speech';
 import { parsePinyin } from '../lib/pinyin';
+import { t } from '../i18n';
 
 /* ---------- context ---------- */
 
@@ -72,7 +73,7 @@ export function Say({ text, label, big = false, auto }: { text: string; label?: 
   }, [auto, status]);
   return (
     <button type="button" className={`say ${big ? 'say-big' : ''} ${on ? 'on' : ''}`} onClick={play}
-      aria-label={label ?? 'Прослушать'} title={status === 'ready' ? 'Прослушать' : VOICE_HELP[status]}>
+      aria-label={label ?? t('Прослушать', 'Listen')} title={status === 'ready' ? t('Прослушать', 'Listen') : VOICE_HELP()[status]}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" />
         <path d="M15.5 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         {on && <path d="M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
@@ -85,7 +86,7 @@ export function Say({ text, label, big = false, auto }: { text: string; label?: 
 export function VoiceWarning() {
   const status = useVoiceStatus();
   if (status === 'ready' || status === 'loading') return null;
-  return <p className="warn">{VOICE_HELP[status]}</p>;
+  return <p className="warn">{VOICE_HELP()[status]}</p>;
 }
 
 /* ---------- stroke order (Hanzi Writer, data served from /strokes) ---------- */
@@ -124,7 +125,7 @@ export function StrokeBox({ char, size = 200, mode = 'animate' }: { char: string
         onLoadCharDataError: () => alive && setState('none'),
       });
       writer.current = w as unknown as typeof writer.current;
-      if (mode === 'quiz') w.quiz({ onComplete: (s: { totalMistakes: number }) => alive && setDone(s.totalMistakes === 0 ? 'Идеально!' : `Готово, ошибок: ${s.totalMistakes}`) });
+      if (mode === 'quiz') w.quiz({ onComplete: (s: { totalMistakes: number }) => alive && setDone(s.totalMistakes === 0 ? t('Идеально!', 'Perfect!') : t(`Готово, ошибок: ${s.totalMistakes}`, `Done, mistakes: ${s.totalMistakes}`)) });
     });
     return () => { alive = false; };
   }, [char, size, mode]);
@@ -132,11 +133,11 @@ export function StrokeBox({ char, size = 200, mode = 'animate' }: { char: string
   return (
     <div className="stroke">
       <div className={`stroke-grid ${state}`} style={{ width: size, height: size }} ref={ref} />
-      {state === 'none' && <p className="muted small">Порядок черт для 「{char}」 пока нет.</p>}
+      {state === 'none' && <p className="muted small">{t(`Порядок черт для 「${char}」 пока нет.`, `No stroke order for 「${char}」 yet.`)}</p>}
       {state === 'ok' && mode === 'animate' && (
-        <button type="button" className="chip" onClick={() => writer.current?.animateCharacter()}>▶ Порядок черт</button>
+        <button type="button" className="chip" onClick={() => writer.current?.animateCharacter()}>▶ {t('Порядок черт', 'Stroke order')}</button>
       )}
-      {state === 'ok' && mode === 'quiz' && <p className="small muted">{done ?? 'Обведи черты пальцем по порядку'}</p>}
+      {state === 'ok' && mode === 'quiz' && <p className="small muted">{done ?? t('Обведи черты пальцем по порядку', 'Trace the strokes in order with your finger')}</p>}
     </div>
   );
 }

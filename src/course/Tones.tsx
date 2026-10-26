@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '../i18n';
 import { useAppState } from '../lib/store';
 import Home from '../components/Home';
 import Session from '../components/Session';
@@ -12,15 +13,15 @@ import ToneSettings from '../components/Settings';
 export default function Tones() {
   const { state, actions } = useAppState();
   const [tab, setTab] = useState<'home' | 'session' | 'library' | 'settings'>('home');
-  if (!state) return <div className="page"><p className="muted">Загружаю…</p></div>;
+  if (!state) return <div className="page"><p className="muted">{t('Загружаю…', 'Loading…')}</p></div>;
   return (
     <div className="page tones-page">
       {tab !== 'session' && (
         <>
-          <h1 className="serif h1">Тоны</h1>
+          <h1 className="serif h1">{t('Тоны', 'Tones')}</h1>
           <div className="seg">
-            {([['home', 'Тренировка'], ['library', 'Слоги'], ['settings', 'Настройки тонов']] as const).map(([k, t]) => (
-              <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t}</button>
+            {([['home', t('Тренировка', 'Practice')], ['library', t('Слоги', 'Syllables')], ['settings', t('Настройки тонов', 'Tone settings')]] as const).map(([k, label]) => (
+              <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>
             ))}
           </div>
         </>

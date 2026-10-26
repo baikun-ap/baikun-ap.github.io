@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * Speech synthesis.
  *
@@ -79,13 +80,14 @@ export function voiceStatus(): VoiceStatus {
   return voices.length ? 'no-chinese' : 'loading';
 }
 
-export const VOICE_HELP: Record<VoiceStatus, string> = {
+export const VOICE_HELP = (): Record<VoiceStatus, string> => ({
   ready: '',
-  loading: 'Голоса ещё загружаются…',
-  'no-chinese':
+  loading: t('Голоса ещё загружаются…', 'Voices are still loading…'),
+  'no-chinese': t(
     'В системе нет китайского голоса, поэтому озвучка звучала бы не по-китайски. macOS: Системные настройки → Универсальный доступ → Проговаривание → Системный голос → Управление голосами → добавь китайский (Tingting или Li-Mu).',
-  unsupported: 'Этот браузер не умеет синтез речи. Нужен Chrome, Edge или Safari.',
-};
+    'Your system has no Chinese voice, so speech would not sound Chinese. macOS: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → add a Chinese voice (Tingting or Li-Mu).'),
+  unsupported: t('Этот браузер не умеет синтез речи. Нужен Chrome, Edge или Safari.', 'This browser cannot speak. Use Chrome, Edge or Safari.'),
+});
 
 export function pickVoice(preferredURI?: string | null): SpeechSynthesisVoice | undefined {
   const zh = chineseVoices();

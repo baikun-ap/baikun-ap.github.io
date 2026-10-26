@@ -12,6 +12,7 @@
 import { useId } from 'react';
 import { TONE_TEMPLATES } from '../lib/pitch';
 import type { Tone } from '../lib/pinyin';
+import { t as tx } from '../i18n';
 
 /** Semitones spanned by the staff, top to bottom. Templates live inside ±5. */
 const ST_MAX = 6;
@@ -72,7 +73,7 @@ export default function ToneStaff({ tone, voice, voiceTone, size = 'inline', sol
       preserveAspectRatio="xMidYMid meet"
     >
       <title id={`${id}-t`}>
-        {label ?? (tone ? `Тон ${tone}${hasVoice ? ' и контур твоего голоса' : ''}` : 'Контур голоса')}
+        {label ?? (tone ? `${tx('Тон', 'Tone')} ${tone}${hasVoice ? tx(' и контур твоего голоса', ' and your voice contour') : ''}` : tx('Контур голоса', 'Voice contour'))}
       </title>
 
       {levels.map((l) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { GRADES, previewInterval, type Grade, type WordCard } from './store';
 import { Py, Say, useCourseCtx } from './ui';
+import { L, plural, t } from '../i18n';
 
 /**
  * Flashcard review: see the front, recall, flip, grade honestly. The queue is
@@ -37,39 +38,39 @@ export default function CardReview({ cards, onFinish }: { cards: WordCard[]; onF
     return (
       <div className="result">
         <div className="result-num">✓</div>
-        <p>Повторение закончено: {doneN} {doneN === 1 ? 'карточка' : 'карточек'}.</p>
-        {onFinish && <button className="btn primary" onClick={onFinish}>Готово</button>}
+        <p>{t(`Повторение закончено: ${doneN} ${plural(doneN, 'карточка', 'карточки', 'карточек')}.`, `Review finished: ${doneN} ${doneN === 1 ? 'card' : 'cards'}.`)}</p>
+        {onFinish && <button className="btn primary" onClick={onFinish}>{t('Готово', 'Done')}</button>}
       </div>
     );
   }
 
   return (
     <div className="review">
-      <div className="muted small center-text">Осталось: {queue.length}</div>
-      <button type="button" className={`flash ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(true)} aria-label="Перевернуть карточку">
+      <div className="muted small center-text">{t('Осталось', 'Left')}: {queue.length}</div>
+      <button type="button" className={`flash ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(true)} aria-label={t('Перевернуть карточку', 'Flip the card')}>
         <div className="flash-front">
-          {front === 'zh' ? <div className="zh-xxl">{card.zh}</div> : <div className="q-ru">{card.ru}</div>}
-          {!flipped && <span className="muted small">Вспомни и нажми, чтобы перевернуть</span>}
+          {front === 'zh' ? <div className="zh-xxl">{card.zh}</div> : <div className="q-ru">{L(card.ru)}</div>}
+          {!flipped && <span className="muted small">{t('Вспомни и нажми, чтобы перевернуть', 'Recall it, then tap to flip')}</span>}
         </div>
         {flipped && (
           <div className="flash-back">
-            {front === 'zh' ? <div className="q-ru">{card.ru}</div> : <div className="zh-xxl">{card.zh}</div>}
+            {front === 'zh' ? <div className="q-ru">{L(card.ru)}</div> : <div className="zh-xxl">{card.zh}</div>}
             <Py text={card.py} className="py-l" />
           </div>
         )}
       </button>
       {flipped ? (
         <>
-          <div className="row center"><Say text={card.zh} auto={card.id} label="Прослушать" /></div>
+          <div className="row center"><Say text={card.zh} auto={card.id} label={t('Прослушать', 'Listen')} /></div>
           <div className="grades">
             {GRADES.map((g) => (
               <button key={g.g} className={`grade g${g.g}`} onClick={() => grade(g.g)}>
-                <span>{g.label}</span><span className="small">{previewInterval(card, g.g)}</span>
+                <span>{t(g.label, g.en)}</span><span className="small">{previewInterval(card, g.g)}</span>
               </button>
             ))}
           </div>
         </>
-      ) : <div className="row center"><button className="btn primary" onClick={() => setFlipped(true)}>Показать ответ</button></div>}
+      ) : <div className="row center"><button className="btn primary" onClick={() => setFlipped(true)}>{t('Показать ответ', 'Show answer')}</button></div>}
     </div>
   );
 }
