@@ -81,6 +81,14 @@ export function checkPinyin(input: string, target: string): 'ok' | 'tones' | 'wr
   return toneless(a) === toneless(b) ? 'tones' : 'wrong';
 }
 
+/** Turns tone numbers into marks as they are typed: "ni3 hao" → "nǐ hao", "nv3" → "nǚ". */
+export function autoMark(s: string): string {
+  return s.replace(/([A-Za-züÜ:]+)([0-5])/g, (_, syl: string, d: string) => {
+    const base = syl.replace(/u:/gi, 'ü').replace(/v/g, 'ü').replace(/V/g, 'Ü');
+    return d === '0' || d === '5' ? base : markTone(base, Number(d) as Tone);
+  });
+}
+
 /* ---------- generators ---------- */
 
 function pinyinQ(w: Word, pool: Word[]): Question {

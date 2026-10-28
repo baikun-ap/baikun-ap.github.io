@@ -54,23 +54,39 @@ check(n === 12 && await page.locator('text=Верно: 0 из 12').isVisible(), 
 await page.click('text=Повторить ошибки');
 check((await page.locator('.quiz-top').count()) === 1, 'redo mistakes restarts');
 
-// 1. Writing on screen: right pinyin read off the reveal, characters given up.
+// 1. Writing on screen, from the top of lesson 1 again.
+await go('midterm');
+await go('midterm/write');
 await page.click('text=✍ На экране');
 await page.waitForTimeout(900);
 check((await page.locator('.stroke-grid svg').count()) > 0, 'stroke quiz is drawn');
 await page.screenshot({ path: `${OUT}/write-screen.png`, fullPage: true });
+// Book order: lesson 1 starts with 八 bā. Tone numbers turn into marks and a right answer is taken at once.
+check((await page.locator('.q-ru').innerText()).trim() === 'восемь', 'book order starts with 八 «восемь»');
+await page.locator('.mt-py input').pressSequentially('ba');
+await page.click('.tone-key.t1');
+check(await page.locator('text=Пиньинь верно!').isVisible(), 'tone button marks the syllable and the answer is accepted instantly');
+check((await page.inputValue('.mt-py input')) === 'bā', 'input shows bā');
 await page.click('text=Не помню — показать');
-const py = (await page.locator('.mt-reveal .py').first().innerText()).trim();
-await page.fill('.mt-py input', py);
-await page.click('.mt-py button');
-check(await page.locator('text=Пиньинь верно!').isVisible(), `typed pinyin "${py}" is accepted`);
+await page.click('.quiz-foot .btn.primary');
+const second = (await page.locator('.q-ru').innerText()).trim();
+await page.locator('.mt-py input').pressSequentially('bai2');
+check((await page.inputValue('.mt-py input')) === 'bái' && await page.locator('text=Пиньинь верно!').isVisible(), `typing bai2 becomes bái and is accepted (${second})`);
+// Leaving and coming back resumes at the same word.
+await go('midterm');
+await go('midterm/write');
+check((await page.locator('.q-ru').innerText()).trim() === second && await page.locator('text=Продолжаем с 2-го задания').isVisible(), 'coming back resumes at the same word');
+// A re-render from a saved answer must not change the task on screen.
+await go('midterm/read');
+await page.locator('.mt-opts .opt').first().click();
+const sentence = await page.locator('.mt-sentence').innerText();
+await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+await page.waitForTimeout(400);
+check((await page.locator('.mt-sentence').innerText()) === sentence, 'the sentence stays put after answering');
+await page.click('.quiz-foot .btn.primary');
 
 // 2. Reading: always pick the first option.
-await go('midterm/read');
-await page.screenshot({ path: `${OUT}/read.png`, fullPage: true });
-n = 0;
-while (!(await resultShown()) && n++ < 20) { await page.locator('.mt-opts .opt').first().click(); await page.click('.quiz-foot .btn.primary'); }
-check(n === 1 && await resultShown(), `reading reached the result for lesson 1 (${n} item)`);
+check(await resultShown(), 'reading reached the result for lesson 1');
 
 // 3. Building and answering need lessons 2+; widen to all lessons.
 await go('midterm');

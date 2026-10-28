@@ -1,8 +1,8 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Word } from '../content/schema';
 import { ANSWER, BUILD, FILL, MIDTERM_BOOK, MIDTERM_LESSONS, type AnswerItem, type BuildItem, type FillItem } from '../content/midterm';
 import { LESSON_BY_ID } from './data';
-import { checkPinyin, shuffle } from './exercises';
+import { autoMark, checkPinyin, shuffle } from './exercises';
 import { hanOnly } from './listen';
 import { Py, Say, StrokeBox, useCourseCtx } from './ui';
 import { L, t } from '../i18n';
@@ -15,6 +15,7 @@ import { L, t } from '../i18n';
 
 const LS_LESSONS = 'baikun-midterm-lessons';
 const LS_WRITE = 'baikun-midterm-write';
+const LS_ORDER = 'baikun-midterm-order';
 
 const readLS = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const writeLS = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
@@ -33,14 +34,24 @@ export default function Midterm({ part }: { part?: string }) {
     return saved?.length ? saved : MIDTERM_LESSONS;
   });
   const setLessons = (l: number[]) => { setLessonsState(l); writeLS(LS_LESSONS, l.join(',')); };
+  const [order, setOrderState] = useState<'book' | 'mix'>(() => (readLS(LS_ORDER) === 'mix' ? 'mix' : 'book'));
+  const setOrder = (o: 'book' | 'mix') => { setOrderState(o); writeLS(LS_ORDER, o); };
+  // Built once per choice of lessons: a re-render (a saved answer, a sync) must never reshuffle the tasks on screen.
   const words = useMemo(() => wordsOf(lessons), [lessons]);
-  const inL = <T extends { lesson: number }>(x: T) => lessons.includes(x.lesson);
-  const fill = FILL.filter(inL), build = BUILD.filter(inL), answer = ANSWER.filter(inL);
+  const { fill, build, answer } = useMemo(() => {
+    const inL = <T extends { lesson: number }>(x: T) => lessons.includes(x.lesson);
+    return { fill: FILL.filter(inL), build: BUILD.filter(inL), answer: ANSWER.filter(inL) };
+  }, [lessons]);
+  const arrange = <T,>(list: T[]) => (order === 'mix' ? shuffle(list) : list);
+  const runner = <T,>(list: T[], run: (items: T[], done: (r: Result & { missed: T[] }) => void, start: number, onAt: (i: number) => void) => ReactNode) => (
+    <Runner key={`${part}-${lessons.join()}-${order}`} make={() => arrange(list)} run={run}
+      resumeKey={order === 'book' ? `baikun-midterm-at-${part}-${lessons.join('')}` : undefined} />
+  );
 
-  if (part === 'write') return <Shell title={t('1. Написание: иероглифы и пиньинь', '1. Writing: characters and pinyin')}><Runner key={`${part}-${lessons.join()}`} make={() => shuffle(words)} run={(items, done) => <WritePart items={items} onFinish={done} />} /></Shell>;
-  if (part === 'read') return <Shell title={t('2. Чтение: вставь слово', '2. Reading: fill the gap')}><Runner key={`${part}-${lessons.join()}`} make={() => shuffle(fill)} run={(items, done) => <FillPart items={items} onFinish={done} />} /></Shell>;
-  if (part === 'build') return <Shell title={t('3. Собери предложение', '3. Build the sentence')}><Runner key={`${part}-${lessons.join()}`} make={() => shuffle(build)} run={(items, done) => <BuildPart items={items} onFinish={done} />} /></Shell>;
-  if (part === 'answer') return <Shell title={t('3. Ответь на вопрос', '3. Answer the question')}><Runner key={`${part}-${lessons.join()}`} make={() => shuffle(answer)} run={(items, done) => <AnswerPart items={items} onFinish={done} />} /></Shell>;
+  if (part === 'write') return <Shell title={t('1. Написание: иероглифы и пиньинь', '1. Writing: characters and pinyin')}>{runner(words, (items, done, start, onAt) => <WritePart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
+  if (part === 'read') return <Shell title={t('2. Чтение: вставь слово', '2. Reading: fill the gap')}>{runner(fill, (items, done, start, onAt) => <FillPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
+  if (part === 'build') return <Shell title={t('3. Собери предложение', '3. Build the sentence')}>{runner(build, (items, done, start, onAt) => <BuildPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
+  if (part === 'answer') return <Shell title={t('3. Ответь на вопрос', '3. Answer the question')}>{runner(answer, (items, done, start, onAt) => <AnswerPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
   if (part === 'exam') return <Shell title={t('Пробный мидтерм', 'Practice midterm')}><Exam words={words} fill={fill} build={build} answer={answer} /></Shell>;
 
   return (
@@ -59,6 +70,12 @@ export default function Midterm({ part }: { part?: string }) {
           })}
           {lessons.length < MIDTERM_LESSONS.length && <button className="chip" onClick={() => setLessons(MIDTERM_LESSONS)}>{t('Все', 'All')}</button>}
         </div>
+        <span className="small muted">{t('Порядок', 'Order')}</span>
+        <div className="seg small">
+          <button className={order === 'book' ? 'on' : ''} onClick={() => setOrder('book')}>{t('Как в книге', 'As in the book')}</button>
+          <button className={order === 'mix' ? 'on' : ''} onClick={() => setOrder('mix')}>{t('Вперемешку', 'Shuffled')}</button>
+        </div>
+        <p className="small muted mt-note">{t('«Как в книге» — слова идут по урокам по порядку, и сайт помнит, где ты остановился.', '“As in the book” goes through the lessons in order and remembers where you stopped.')}</p>
       </section>
 
       <div className="mt-parts">
@@ -99,10 +116,18 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Runs one part, then shows the score and offers to redo the misses. */
-function Runner<T>({ make, run }: { make: () => T[]; run: (items: T[], done: (r: Result & { missed: T[] }) => void) => ReactNode }) {
+function Runner<T>({ make, run, resumeKey }: {
+  make: () => T[]; resumeKey?: string;
+  run: (items: T[], done: (r: Result & { missed: T[] }) => void, start: number, onAt: (i: number) => void) => ReactNode;
+}) {
   const [items, setItems] = useState(make);
   const [round, setRound] = useState(0);
-  const [res, setRes] = useState<(Result & { missed: T[] }) | null>(null);
+  const [res, setResState] = useState<(Result & { missed: T[] }) | null>(null);
+  // Only the first full pass in book order resumes; redoing mistakes starts at the top.
+  const resumable = !!resumeKey && round === 0;
+  const [start, setStart] = useState(() => { const n = Number(resumeKey ? readLS(resumeKey) : 0) || 0; return n < items.length ? n : 0; });
+  const onAt = (i: number) => { if (resumable) writeLS(resumeKey!, String(i)); };
+  const setRes = (r: Result & { missed: T[] }) => { if (resumeKey) writeLS(resumeKey, '0'); setResState(r); };
   if (!items.length) return <p className="muted">{t('Для выбранных уроков тут пока нет заданий.', 'No tasks for the chosen lessons yet.')}</p>;
   if (res) {
     const pct = Math.round((res.right / res.total) * 100);
@@ -112,14 +137,28 @@ function Runner<T>({ make, run }: { make: () => T[]; run: (items: T[], done: (r:
         <p>{t(`Верно: ${res.right} из ${res.total}`, `Correct: ${res.right} of ${res.total}`)}</p>
         {res.misses.length > 0 && <div className="mt-misses"><span className="small muted">{t('Ошибки', 'Mistakes')}:</span> <span className="zh">{res.misses.join('　')}</span></div>}
         <div className="row center">
-          {res.missed.length > 0 && <button className="btn primary" onClick={() => { setItems(shuffle(res.missed)); setRes(null); setRound(round + 1); }}>{t('Повторить ошибки', 'Redo mistakes')}</button>}
-          <button className="btn" onClick={() => { setItems(make()); setRes(null); setRound(round + 1); }}>{t('Ещё раз', 'Again')}</button>
+          {res.missed.length > 0 && <button className="btn primary" onClick={() => { setItems(shuffle(res.missed)); setResState(null); setStart(0); setRound(round + 1); }}>{t('Повторить ошибки', 'Redo mistakes')}</button>}
+          <button className="btn" onClick={() => { setItems(make()); setResState(null); setStart(0); setRound(round + 1); }}>{t('Ещё раз', 'Again')}</button>
           <a className="btn" href="#/midterm">{t('К мидтерму', 'Back to midterm')}</a>
         </div>
       </div>
     );
   }
-  return <div key={round}>{run(items, setRes)}</div>;
+  return (
+    <div key={round}>
+      {resumable && start > 0 && (
+        <p className="small muted mt-note">{t(`Продолжаем с ${start + 1}-го задания.`, `Resuming at task ${start + 1}.`)} <button className="link-btn" onClick={() => { setStart(0); onAt(0); setRound(round + 1); }}>{t('Начать сначала', 'Start over')}</button></p>
+      )}
+      {run(items, setRes, resumable ? start : 0, onAt)}
+    </div>
+  );
+}
+
+/** Keeps the current task index in step with the runner's bookmark. */
+function useAt(start = 0, onAt?: (i: number) => void) {
+  const [i, setI] = useState(start);
+  useEffect(() => { onAt?.(i); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
+  return [i, setI] as const;
 }
 
 function Progress({ i, n }: { i: number; n: number }) {
@@ -128,9 +167,9 @@ function Progress({ i, n }: { i: number; n: number }) {
 
 /* ---------- 1. writing ---------- */
 
-function WritePart({ items, onFinish }: { items: MidWord[]; onFinish: (r: Result & { missed: MidWord[] }) => void }) {
+function WritePart({ items, onFinish, start, onAt }: { items: MidWord[]; onFinish: (r: Result & { missed: MidWord[] }) => void; start?: number; onAt?: (i: number) => void }) {
   const { actions } = useCourseCtx();
-  const [i, setI] = useState(0);
+  const [i, setI] = useAt(start, onAt);
   const [mode, setModeState] = useState<'screen' | 'paper'>(() => (readLS(LS_WRITE) === 'paper' ? 'paper' : 'screen'));
   const setMode = (m: 'screen' | 'paper') => { setModeState(m); writeLS(LS_WRITE, m); };
   const [py, setPy] = useState('');
@@ -145,6 +184,13 @@ function WritePart({ items, onFinish }: { items: MidWord[]; onFinish: (r: Result
   const chars = [...hanOnly(w.zh)];
 
   const checkPy = () => { if (py.trim()) setPyRes(checkPinyin(py, w.py)); };
+  // Tones turn into marks as you type (ni3 → nǐ), and a right answer is accepted at once.
+  const typePy = (raw: string) => {
+    const v = autoMark(raw);
+    setPy(v);
+    if (checkPinyin(v, w.py) === 'ok') setPyRes('ok');
+  };
+  const addTone = (tone: number) => typePy(py.replace(/\s+$/, '') + tone);
   const charDone = (m: number) => {
     const total = mistakes + m;
     setMistakes(total);
@@ -176,10 +222,21 @@ function WritePart({ items, onFinish }: { items: MidWord[]; onFinish: (r: Result
       </div>
 
       <form className="row mt-py" onSubmit={(e) => { e.preventDefault(); checkPy(); }}>
-        <input className="search" value={py} onChange={(e) => setPy(e.target.value)} disabled={pyRes !== null} autoCapitalize="off" autoCorrect="off" spellCheck={false}
-          placeholder={t('пиньинь: ni3 hao3 или nǐ hǎo', 'pinyin: ni3 hao3 or nǐ hǎo')} style={{ marginBottom: 0 }} />
+        <input className="search" value={py} onChange={(e) => typePy(e.target.value)} disabled={pyRes !== null} autoCapitalize="off" autoCorrect="off" autoComplete="off" spellCheck={false}
+          placeholder={t('пиньинь, например ni3 → nǐ', 'pinyin, e.g. ni3 → nǐ')} style={{ marginBottom: 0 }} />
         {pyRes === null && <button className="btn primary" disabled={!py.trim()}>{t('Проверить', 'Check')}</button>}
       </form>
+      {pyRes === null && (
+        <div className="mt-tones">
+          {[1, 2, 3, 4].map((n) => (
+            <button key={n} type="button" className={`tone-key t${n}`} onMouseDown={(e) => e.preventDefault()} onClick={() => addTone(n)}
+              aria-label={t(`${n}-й тон`, `Tone ${n}`)}>{['', 'ā', 'á', 'ǎ', 'à'][n]}</button>
+          ))}
+          <button type="button" className="tone-key" onMouseDown={(e) => e.preventDefault()} onClick={() => typePy(py + 'ü')}>ü</button>
+          <button type="button" className="chip" onClick={() => setPyRes('wrong')}>{t('Не знаю', 'I don’t know')}</button>
+        </div>
+      )}
+      {pyRes === null && <p className="small muted mt-note">{t('Пиши слог и сразу цифру тона: ni3 → nǐ, hao3 → hǎo. Или нажми кнопку тона после слога. Верный ответ засчитается сам.', 'Type a syllable and its tone number: ni3 → nǐ, hao3 → hǎo. Or tap a tone button after the syllable. A right answer is accepted by itself.')}</p>}
       {pyRes !== null && (
         <p className={`verdict ${pyRes === 'ok' ? 'ok' : 'bad'}`}>
           {pyRes === 'ok' ? t('Пиньинь верно!', 'Pinyin correct!') : pyRes === 'tones' ? t('Звуки верно, тоны — нет:', 'Sounds right, tones wrong:') : t('Неверно, правильно:', 'Wrong, correct:')} {pyRes !== 'ok' && <Py text={w.py} />}
@@ -227,9 +284,9 @@ function WritePart({ items, onFinish }: { items: MidWord[]; onFinish: (r: Result
 
 /* ---------- 2. reading ---------- */
 
-function FillPart({ items, onFinish }: { items: FillItem[]; onFinish: (r: Result & { missed: FillItem[] }) => void }) {
+function FillPart({ items, onFinish, start, onAt }: { items: FillItem[]; onFinish: (r: Result & { missed: FillItem[] }) => void; start?: number; onAt?: (i: number) => void }) {
   const { actions } = useCourseCtx();
-  const [i, setI] = useState(0);
+  const [i, setI] = useAt(start, onAt);
   const [picked, setPicked] = useState<string | null>(null);
   const [hint, setHint] = useState(false);
   const [right, setRight] = useState(0);
@@ -299,13 +356,13 @@ function Tiles({ tokens, built, setBuilt, bank, state }: { tokens: string[]; bui
   );
 }
 
-function BuildPart({ items, onFinish }: { items: BuildItem[]; onFinish: (r: Result & { missed: BuildItem[] }) => void }) {
-  return <TilePart items={items} onFinish={onFinish} prompt={(q) => <><p className="q-ask">{t('Собери предложение', 'Build the sentence')}</p><div className="q-ru">{t(q.ru, q.en)}</div></>} />;
+function BuildPart({ items, onFinish, start, onAt }: { items: BuildItem[]; onFinish: (r: Result & { missed: BuildItem[] }) => void; start?: number; onAt?: (i: number) => void }) {
+  return <TilePart items={items} onFinish={onFinish} start={start} onAt={onAt} prompt={(q) => <><p className="q-ask">{t('Собери предложение', 'Build the sentence')}</p><div className="q-ru">{t(q.ru, q.en)}</div></>} />;
 }
 
-function AnswerPart({ items, onFinish }: { items: AnswerItem[]; onFinish: (r: Result & { missed: AnswerItem[] }) => void }) {
+function AnswerPart({ items, onFinish, start, onAt }: { items: AnswerItem[]; onFinish: (r: Result & { missed: AnswerItem[] }) => void; start?: number; onAt?: (i: number) => void }) {
   const [hint, setHint] = useState<string | null>(null);
-  return <TilePart items={items} onFinish={onFinish} prompt={(q, checked) => (
+  return <TilePart items={items} onFinish={onFinish} start={start} onAt={onAt} prompt={(q, checked) => (
     <>
       <p className="q-ask">{t('Ответь на вопрос — собери ответ из слов', 'Answer the question — build the reply from the words')}</p>
       <div className="mt-sentence zh">{q.q}</div>
@@ -316,10 +373,10 @@ function AnswerPart({ items, onFinish }: { items: AnswerItem[]; onFinish: (r: Re
   )} />;
 }
 
-function TilePart<T extends { tokens: string[]; alts?: string[][]; py: string; ru: string; en: string }>({ items, onFinish, prompt }: {
-  items: T[]; onFinish: (r: Result & { missed: T[] }) => void; prompt: (q: T, checked: boolean) => ReactNode;
+function TilePart<T extends { tokens: string[]; alts?: string[][]; py: string; ru: string; en: string }>({ items, onFinish, prompt, start, onAt }: {
+  items: T[]; onFinish: (r: Result & { missed: T[] }) => void; prompt: (q: T, checked: boolean) => ReactNode; start?: number; onAt?: (i: number) => void;
 }) {
-  const [i, setI] = useState(0);
+  const [i, setI] = useAt(start, onAt);
   const [right, setRight] = useState(0);
   const [missed, setMissed] = useState<T[]>([]);
   const q = items[i];
@@ -362,12 +419,13 @@ function TileQuestion<T extends { tokens: string[]; alts?: string[][]; py: strin
 
 function Exam({ words, fill, build, answer }: { words: MidWord[]; fill: FillItem[]; build: BuildItem[]; answer: AnswerItem[] }) {
   // Parts with nothing to ask for the chosen lessons are left out.
-  const parts = useMemo(() => [
+  // Drawn once when the exam starts and kept for its whole run.
+  const [parts] = useState(() => [
     { key: 'write', items: shuffle(words).slice(0, 10) },
     { key: 'fill', items: shuffle(fill).slice(0, 10) },
     { key: 'build', items: shuffle(build).slice(0, 5) },
     { key: 'answer', items: shuffle(answer).slice(0, 5) },
-  ].filter((p) => p.items.length), [words, fill, build, answer]);
+  ].filter((p) => p.items.length));
   const [stage, setStage] = useState(0);
   const [scores, setScores] = useState<Result[]>([]);
   const done = (r: Result) => { setScores([...scores, r]); setStage(stage + 1); };

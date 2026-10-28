@@ -609,3 +609,9 @@ a.mt-part:hover { border-color: var(--cyan); }
 .mt-score { list-style: none; padding: 0; margin: 8px auto 16px; max-width: 320px; }
 .mt-score li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--rule, rgba(0,0,0,.08)); }
 @media (max-width: 360px) { .x-tabs a, .x-tabs button { font-size: 10px; letter-spacing: -.02em; } }
+.mt-tones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 6px; }
+.tone-key { min-width: 48px; height: 44px; border-radius: 12px; border: 1px solid var(--rule, rgba(0,0,0,.12)); background: var(--card, #fff); color: var(--ink); font: 500 20px var(--ui); cursor: pointer; }
+.tone-key.t1 { color: var(--t1, #e5484d); } .tone-key.t2 { color: var(--t2, #30a46c); } .tone-key.t3 { color: var(--t3, #0090ff); } .tone-key.t4 { color: var(--t4, #8e4ec6); }
+.mt-note { margin: 4px 0 8px; }
+.mt-lessons .seg { margin: 0; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--cyan); font: inherit; cursor: pointer; text-decoration: underline; }
