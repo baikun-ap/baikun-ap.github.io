@@ -60,6 +60,12 @@ export default function Midterm({ part }: { part?: string }) {
       <h1 className="serif h1">{t('Подготовка к мидтерму', 'Midterm prep')}</h1>
       <p className="muted lead">{t('《汉语教程》 книга 1A, уроки 1–7: все слова из книги и три формата заданий, как на мидтерме.', '《汉语教程》 Book 1A, lessons 1–7: every word from the book and the three task types of the midterm.')}</p>
 
+      <a className="panel mt-pdf" href={`${import.meta.env.BASE_URL}files/jc1a-1-7.pdf`} target="_blank" rel="noopener">
+        <span className="mt-zh zh">词</span>
+        <div><h3>{t('📄 Все слова уроков 1–7 (PDF)', '📄 All words of lessons 1–7 (PDF)')}</h3>
+          <p className="muted small">{t('153 слова: иероглиф, пиньинь, перевод и разбор по иероглифам. В конце — листы «Проверь себя» с клетками для письма. Можно распечатать.', '153 words: character, pinyin, Russian meaning and a breakdown by character, plus “test yourself” sheets with writing boxes. Printable.')}</p></div>
+      </a>
+
       <section className="panel mt-lessons">
         <span className="small muted">{t('Уроки', 'Lessons')}</span>
         <div className="row">
