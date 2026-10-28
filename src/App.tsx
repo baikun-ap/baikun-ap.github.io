@@ -6,12 +6,14 @@ import { CourseCtx, useRoute } from './course/ui';
 import Lesson from './course/Lesson';
 import Tones from './course/Tones';
 import { Cards, Course, Dashboard, Grammar, Hanzi, Pinyin, Settings } from './course/Pages';
+import Midterm from './course/Midterm';
 import { setLang, t, useLang } from './i18n';
 
 const nav = (): { href: string; key: string; label: string; zh: string; main?: boolean }[] => [
   { href: '#/', key: '', label: t('Главная', 'Home'), zh: '家', main: true },
   { href: '#/course', key: 'course', label: t('Курс', 'Course'), zh: '课', main: true },
   { href: '#/cards', key: 'cards', label: t('Карточки', 'Cards'), zh: '卡', main: true },
+  { href: '#/midterm', key: 'midterm', label: t('Мидтерм', 'Midterm'), zh: '考', main: true },
   { href: '#/pinyin', key: 'pinyin', label: t('Пиньинь', 'Pinyin'), zh: '拼' },
   { href: '#/tones', key: 'tones', label: t('Тоны', 'Tones'), zh: '声' },
   { href: '#/grammar', key: 'grammar', label: t('Грамматика', 'Grammar'), zh: '法' },
@@ -67,6 +69,7 @@ export default function App() {
       case 'course': page = <Course />; break;
       case 'lesson': page = <Lesson id={route[1]} step={Number(route[2]) || 1} />; break;
       case 'cards': page = <Cards />; break;
+      case 'midterm': page = <Midterm part={route[1]} />; break;
       case 'pinyin': page = <Pinyin />; break;
       case 'tones': page = <Tones />; break;
       case 'grammar': page = <Grammar />; break;

@@ -63,6 +63,24 @@ export const bare = (py: string) => stripTone(py);
 
 const pyKey = (s: string) => s.toLowerCase().replace(/\s+/g, '');
 
+/* ---------- typed pinyin ---------- */
+
+const TONE_MARKS = /[\u0300\u0301\u0304\u030c]/g;
+
+/** "ni3 hao3", "nǐhǎo" and "Nǐ hǎo" all become "nǐhǎo". */
+export function normPinyin(s: string): string {
+  const x = s.normalize('NFC').toLowerCase().trim().replace(/u:/g, 'ü').replace(/v/g, 'ü')
+    .replace(/([a-zü]+)([0-5])/g, (_, syl: string, d: string) => (d === '0' || d === '5' ? syl : markTone(syl, Number(d) as Tone)));
+  return x.replace(/[\s'’\-·.,!?]/g, '');
+}
+const toneless = (s: string) => s.normalize('NFD').replace(TONE_MARKS, '').normalize('NFC');
+
+export function checkPinyin(input: string, target: string): 'ok' | 'tones' | 'wrong' {
+  const a = normPinyin(input), b = normPinyin(target);
+  if (a === b) return 'ok';
+  return toneless(a) === toneless(b) ? 'tones' : 'wrong';
+}
+
 /* ---------- generators ---------- */
 
 function pinyinQ(w: Word, pool: Word[]): Question {

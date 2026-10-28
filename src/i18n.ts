@@ -16,13 +16,14 @@ function detect(): Lang {
     const saved = localStorage.getItem(KEY);
     if (saved === 'ru' || saved === 'en') return saved;
   } catch { /* storage blocked */ }
+  if (typeof navigator === 'undefined') return 'ru';
   const nav = (navigator.languages?.[0] ?? navigator.language ?? '').toLowerCase();
   return /^(ru|uk|be|kk|ky|uz|tg)/.test(nav) ? 'ru' : 'en';
 }
 
 let lang: Lang = detect();
 const subs = new Set<() => void>();
-document.documentElement.lang = lang;
+if (typeof document !== 'undefined') document.documentElement.lang = lang;
 
 export const getLang = () => lang;
 

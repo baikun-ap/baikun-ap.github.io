@@ -93,11 +93,13 @@ export function VoiceWarning() {
 
 const STROKE_BASE = `${import.meta.env.BASE_URL}strokes/`;
 
-export function StrokeBox({ char, size = 200, mode = 'animate' }: { char: string; size?: number; mode?: 'animate' | 'quiz' }) {
+export function StrokeBox({ char, size = 200, mode = 'animate', outline = true, onComplete }: { char: string; size?: number; mode?: 'animate' | 'quiz'; outline?: boolean; onComplete?: (mistakes: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const writer = useRef<{ animateCharacter: () => void; quiz: (o?: object) => void; cancelQuiz?: () => void } | null>(null);
   const [state, setState] = useState<'load' | 'ok' | 'none'>('load');
   const [done, setDone] = useState<string | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     let alive = true;
@@ -117,7 +119,7 @@ export function StrokeBox({ char, size = 200, mode = 'animate' }: { char: string
         drawingColor: css.getPropertyValue('--cyan').trim() || '#79dce8',
         highlightColor: '#79dce8',
         strokeAnimationSpeed: 1.1, delayBetweenStrokes: 180,
-        showOutline: true, showCharacter: mode === 'animate',
+        showOutline: outline, showCharacter: mode === 'animate',
         charDataLoader: ((c: string, onLoad: (d: object) => void, onError: () => void) => {
           fetch(`${STROKE_BASE}${encodeURIComponent(c)}.json`).then((r) => (r.ok ? r.json() : Promise.reject())).then(onLoad, onError);
         }) as unknown as Loader,
@@ -125,10 +127,14 @@ export function StrokeBox({ char, size = 200, mode = 'animate' }: { char: string
         onLoadCharDataError: () => alive && setState('none'),
       });
       writer.current = w as unknown as typeof writer.current;
-      if (mode === 'quiz') w.quiz({ onComplete: (s: { totalMistakes: number }) => alive && setDone(s.totalMistakes === 0 ? t('Идеально!', 'Perfect!') : t(`Готово, ошибок: ${s.totalMistakes}`, `Done, mistakes: ${s.totalMistakes}`)) });
+      if (mode === 'quiz') w.quiz({ onComplete: (s: { totalMistakes: number }) => {
+        if (!alive) return;
+        setDone(s.totalMistakes === 0 ? t('Идеально!', 'Perfect!') : t(`Готово, ошибок: ${s.totalMistakes}`, `Done, mistakes: ${s.totalMistakes}`));
+        onCompleteRef.current?.(s.totalMistakes);
+      } });
     });
     return () => { alive = false; };
-  }, [char, size, mode]);
+  }, [char, size, mode, outline]);
 
   return (
     <div className="stroke">
@@ -137,7 +143,7 @@ export function StrokeBox({ char, size = 200, mode = 'animate' }: { char: string
       {state === 'ok' && mode === 'animate' && (
         <button type="button" className="chip" onClick={() => writer.current?.animateCharacter()}>▶ {t('Порядок черт', 'Stroke order')}</button>
       )}
-      {state === 'ok' && mode === 'quiz' && <p className="small muted">{done ?? t('Обведи черты пальцем по порядку', 'Trace the strokes in order with your finger')}</p>}
+      {state === 'ok' && mode === 'quiz' && <p className="small muted">{done ?? (outline ? t('Обведи черты пальцем по порядку', 'Trace the strokes in order with your finger') : t('Пиши черты по порядку. После 3 ошибок появится подсказка', 'Write the strokes in order. A hint appears after 3 misses'))}</p>}
     </div>
   );
 }

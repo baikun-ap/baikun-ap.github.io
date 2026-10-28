@@ -49,6 +49,9 @@ function collectFromData() {
     (h.alts ?? []).forEach((a) => { add(a.py); });
     (h.words ?? []).forEach((w) => { add(w.w); add(w.p); });
   }
+  // The course books and midterm sentences use characters outside the dictionary too.
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+  for (const f of walk(path.join(ROOT, 'src/content'))) for (const ch of fs.readFileSync(f, 'utf8').match(/\p{Script=Han}/gu) ?? []) set.add(ch);
   return set;
 }
 
