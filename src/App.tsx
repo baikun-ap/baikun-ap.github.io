@@ -73,7 +73,7 @@ export default function App() {
       case 'course': page = <Course />; break;
       case 'lesson': page = <Lesson id={route[1]} step={Number(route[2]) || 1} />; break;
       case 'cards': page = <Cards />; break;
-      case 'midterm': page = <Midterm part={route[1]} />; break;
+      case 'midterm': page = <Midterm part={route[1]} sub={route[2]} />; break;
       case 'write': page = <WritePage go={route[1]} />; break;
       case 'parts': page = <PartsPage char={route[1]} />; break;
       case 'pinyin': page = <Pinyin />; break;

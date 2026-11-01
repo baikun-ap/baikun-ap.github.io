@@ -139,12 +139,14 @@ function useBoxSize(n: number) {
 
 /* ---------- the writing task ---------- */
 
-export function WritePart({ items, onFinish, start, onAt }: { items: WriteWord[]; onFinish: (r: Result & { missed: WriteWord[] }) => void; start?: number; onAt?: (i: number) => void }) {
+export function WritePart({ items, onFinish, start, onAt, byPinyin }: { items: WriteWord[]; onFinish: (r: Result & { missed: WriteWord[] }) => void; start?: number; onAt?: (i: number) => void; byPinyin?: boolean }) {
   const { actions } = useCourseCtx();
   const [i, setI] = useAt(start, onAt);
   const [mode, setModeState] = useState<Mode>(() => { const m = readLS(LS_MODE); return m === 'screen' || m === 'paper' ? m : 'free'; });
   const setMode = (m: Mode) => { setModeState(m); writeLS(LS_MODE, m); };
-  const [askPy, setAskPyState] = useState(() => readLS(LS_PY) !== 'off');
+  const [askPySaved, setAskPyState] = useState(() => readLS(LS_PY) !== 'off');
+  // Prompted by pinyin ("write the correct 汉字"), there is no pinyin to ask for.
+  const askPy = !byPinyin && askPySaved;
   const setAskPy = (v: boolean) => { setAskPyState(v); writeLS(LS_PY, v ? 'on' : 'off'); };
   const [py, setPy] = useState('');
   const [pyRes, setPyRes] = useState<'ok' | 'tones' | 'wrong' | null>(null);
@@ -194,11 +196,11 @@ export function WritePart({ items, onFinish, start, onAt }: { items: WriteWord[]
           <button className={mode === 'screen' ? 'on' : ''} onClick={() => setMode('screen')}>{t('🎯 Черты', '🎯 Strokes')}</button>
           <button className={mode === 'paper' ? 'on' : ''} onClick={() => setMode('paper')}>{t('📝 Бумага', '📝 Paper')}</button>
         </div>
-        <label className="check small"><input type="checkbox" checked={askPy} onChange={(e) => setAskPy(e.target.checked)} /> {t('спрашивать пиньинь', 'ask pinyin')}</label>
+        {!byPinyin && <label className="check small"><input type="checkbox" checked={askPy} onChange={(e) => setAskPy(e.target.checked)} /> {t('спрашивать пиньинь', 'ask pinyin')}</label>}
       </div>
       <div className="q-prompt">
         <p className="q-ask">{askPy ? t('Напиши пиньинь и иероглифы', 'Write the pinyin and the characters') : t('Напиши иероглифы', 'Write the characters')} <span className="muted small">· {w.tag ?? `${t('урок', 'lesson')} ${w.lesson}`}</span></p>
-        <div className="q-ru">{L(w.ru)}</div>
+        {byPinyin ? <div className="q-ru"><Py text={w.py} className="py-l" /></div> : <div className="q-ru">{L(w.ru)}</div>}
         <p className="muted small">{t(`${chars.length} ${chars.length === 1 ? 'иероглиф' : chars.length < 5 ? 'иероглифа' : 'иероглифов'}`, `${chars.length} ${chars.length === 1 ? 'character' : 'characters'}`)}</p>
       </div>
 
@@ -279,7 +281,7 @@ export function WritePart({ items, onFinish, start, onAt }: { items: WriteWord[]
 
 const LS_SEL = 'baikun-write-lessons';
 const LS_ORDER = 'baikun-write-order';
-const DEFAULT = Array.from({ length: 7 }, (_, k) => `jc1a-${k + 1}`);
+const DEFAULT = Array.from({ length: 8 }, (_, k) => `jc1a-${k + 1}`);
 
 export default function WritePage({ go }: { go?: string }) {
   const { state } = useCourseCtx();
@@ -337,7 +339,7 @@ export default function WritePage({ go }: { go?: string }) {
         </section>
       ))}
       <div className="row">
-        <button className="chip" onClick={() => setSel(DEFAULT)}>{t('Уроки 1–7 (1A)', 'Lessons 1–7 (1A)')}</button>
+        <button className="chip" onClick={() => setSel(DEFAULT)}>{t('Уроки 1–8 (1A)', 'Lessons 1–8 (1A)')}</button>
         {studied.length > 0 && <button className="chip" onClick={() => setSel(studied)}>{t(`Пройденные на сайте · ${studied.length}`, `Done on the site · ${studied.length}`)}</button>}
         {sel.length > 0 && <button className="chip" onClick={() => setSel([])}>{t('Снять всё', 'Clear')}</button>}
       </div>

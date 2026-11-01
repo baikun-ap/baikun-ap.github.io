@@ -31,11 +31,11 @@ const resultShown = async () => (await page.locator('.result-num').count()) > 0;
 await go('midterm');
 await page.screenshot({ path: `${OUT}/hub.png`, fullPage: true });
 check((await page.locator('.mt-part').count()) === 3, 'hub shows three parts');
-check(await page.locator('text=Все 153 слов').isVisible(), 'writing covers all 153 words of lessons 1–7');
+check(await page.locator('text=Все 178 слов').isVisible(), 'writing covers all 178 words of lessons 1–8');
 check((await page.locator('.x-tabs a[href="#/midterm"]').count()) === 1, 'midterm has its own tab');
 
 // Narrow to lesson 1 (12 words) to keep the walk short.
-for (const n of [2, 3, 4, 5, 6, 7]) await page.click(`.mt-lessons .chip:text-is("${n}")`);
+for (const n of [2, 3, 4, 5, 6, 7, 8]) await page.click(`.mt-lessons .chip:text-is("${n}")`);
 check(await page.locator('text=Все 12 слов').isVisible(), 'lesson filter narrows the words');
 
 // 1. Writing on paper: a wrong pinyin, then "wrote it right" — every word ends up a miss.
@@ -98,7 +98,7 @@ while (!(await resultShown()) && n++ < 40) {
   if (n === 1) await page.screenshot({ path: `${OUT}/build.png`, fullPage: true });
   await page.click('.quiz-foot .btn.primary'); await page.click('.quiz-foot .btn.primary');
 }
-check(n === 24 && await resultShown(), `building ran all 24 sentences (${n})`);
+check(n === 27 && await resultShown(), `building ran all 27 sentences (${n})`);
 
 await go('midterm/answer');
 n = 0;
@@ -107,7 +107,7 @@ while (!(await resultShown()) && n++ < 40) {
   for (const t of await page.locator('.build-bank .tile').all()) await t.click();
   await page.click('.quiz-foot .btn.primary'); await page.click('.quiz-foot .btn.primary');
 }
-check(n === 21 && await resultShown(), `answering ran all 21 questions (${n})`);
+check(n === 24 && await resultShown(), `answering ran all 24 questions (${n})`);
 
 // Practice midterm: 10 + 10 + 5 + 5.
 await go('midterm/exam');
@@ -132,7 +132,7 @@ await page.screenshot({ path: `${OUT}/exam-result.png`, fullPage: true });
 await go('write');
 await page.screenshot({ path: `${OUT}/write-page.png`, fullPage: true });
 check((await page.locator('.x-tabs a[href="#/write"]').count()) === 1, 'writing has its own tab');
-check(await page.locator('text=Выбрано: 153 слов').isVisible(), 'writing defaults to lessons 1–7 (153 words)');
+check(await page.locator('text=Выбрано: 178 слов').isVisible(), 'writing defaults to lessons 1–8 (178 words)');
 await page.click('text=Начать писать');
 await page.waitForTimeout(500);
 await page.click('text=✍ Свободно');
@@ -171,6 +171,48 @@ await page.waitForTimeout(800);
 check((await page.locator('.hz-step .nt-row').count()) >= 1, 'lesson step 1 shows how to remember the word');
 await go('hanzi/好');
 check((await page.locator('.nt-row').count()) === 1, 'the dictionary page shows the note');
+
+// The teacher's test: every section in its paper format, right answers score full marks.
+await go('midterm/paper');
+await page.screenshot({ path: `${OUT}/paper.png`, fullPage: true });
+check((await page.locator('.paper-sec').count()) === 5, 'the test lists its five sections');
+await go('midterm/paper/pinyin');
+const PY = ['qu3 qian2', 'shen1ti3', 'ju2zi', 'zhe4xie1', 'yin2hang2', 'jin1tian1', 'zai4jian4', 'he1 cha2', 'qing3 jin4', 'mei4mei'];
+const boxes = await page.locator('.paper-py input').all();
+for (let k = 0; k < boxes.length; k++) await boxes[k].pressSequentially(PY[k]);
+check((await boxes[0].inputValue()) === 'qǔ qián', 'tone numbers turn into marks in the pinyin task');
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 10 из 10').isVisible(), 'pinyin task: 10 of 10');
+await page.screenshot({ path: `${OUT}/paper-pinyin.png`, fullPage: true });
+await go('midterm/paper/fill');
+const KEY = ['C', 'E', 'B', 'D', 'A', 'H', 'J', 'I', 'G', 'F'];
+const sels = await page.locator('.paper-sel').all();
+for (let k = 0; k < sels.length; k++) await sels[k].selectOption(KEY[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 10 из 10').isVisible(), 'word box task: 10 of 10 with the answer key');
+await go('midterm/paper/dialog');
+const ANS = ['我很忙', '汉语不太难', '我去银行取钱', '今天星期六', '我姓王', '你叫什么名字', '我吃米饭', '苹果多少钱一斤', '你要什么汤', '你吃馒头吗', '你是日本人吗', '你呢', '便宜一点儿吧', '他是我的朋友', '这是我的汉语书'];
+const ins = await page.locator('.pd-blank input').all();
+check(ins.length === 15, `dialogues have 15 blanks (${ins.length})`);
+for (let k = 0; k < ins.length; k++) await ins[k].fill(ANS[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 15 из 15').isVisible(), 'dialogues: sample answers are all accepted');
+await page.screenshot({ path: `${OUT}/paper-dialog.png`, fullPage: true });
+await go('midterm/paper/measure');
+const MW = ['碗', '本', '支', '杯', '碗', '盘', '杯', '瓶', '斤', '本'];
+const ms = await page.locator('.paper-sel').all();
+for (let k = 0; k < ms.length; k++) await ms[k].selectOption(MW[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 10 из 10').isVisible(), 'measure words: 10 of 10');
+await go('midterm/paper/listen');
+for (const li of await page.locator('.paper-rows > li').all()) await li.locator('.opt').first().click();
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('.quiz-foot .verdict').isVisible(), 'listening section checks');
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('.result-num').innerText().then((s) => /\/20$/.test(s)), 'listening scores out of 20');
+await go('midterm/slide');
+check((await page.locator('.q-ru .py').innerText()).replace(/\s/g, '').toLowerCase() === 'hànyǔ' && (await page.locator('.mt-py').count()) === 0, 'the slide shows pinyin and asks for characters only');
+await page.screenshot({ path: `${OUT}/slide.png`, fullPage: true });
 
 check(errors.length === 0, `no page errors ${errors.join(' | ')}`);
 await b.close(); server.close();

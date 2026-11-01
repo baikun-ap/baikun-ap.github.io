@@ -5,9 +5,10 @@ import { shuffle } from './exercises';
 import { Py, Say, useCourseCtx } from './ui';
 import { Progress, Runner, WritePart, readLS, useAt, writeLS, type Result, type WriteWord } from './Write';
 import { t } from '../i18n';
+import Paper, { SlideWrite } from './Paper';
 
 /**
- * Midterm practice for Book 1A, lessons 1–7, in the three formats of the
+ * Midterm practice for Book 1A, lessons 1–8, in the three formats of the
  * test: write every word in characters and pinyin, read a sentence and fill
  * the gap (three options), and put sentences and answers together.
  */
@@ -22,7 +23,7 @@ const wordsOf = (lessons: number[]): MidWord[] =>
 
 /* ---------- page ---------- */
 
-export default function Midterm({ part }: { part?: string }) {
+export default function Midterm({ part, sub }: { part?: string; sub?: string }) {
   const [lessons, setLessonsState] = useState<number[]>(() => {
     const saved = readLS(LS_LESSONS)?.split(',').map(Number).filter((n) => MIDTERM_LESSONS.includes(n));
     return saved?.length ? saved : MIDTERM_LESSONS;
@@ -43,6 +44,8 @@ export default function Midterm({ part }: { part?: string }) {
       backHref="#/midterm" backLabel={t('К мидтерму', 'Back to midterm')} />
   );
 
+  if (part === 'paper') return <Paper sub={sub} />;
+  if (part === 'slide') return <SlideWrite />;
   if (part === 'write') return <Shell title={t('1. Написание: иероглифы и пиньинь', '1. Writing: characters and pinyin')}>{runner(words, (items, done, start, onAt) => <WritePart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
   if (part === 'read') return <Shell title={t('2. Чтение: вставь слово', '2. Reading: fill the gap')}>{runner(fill, (items, done, start, onAt) => <FillPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
   if (part === 'build') return <Shell title={t('3. Собери предложение', '3. Build the sentence')}>{runner(build, (items, done, start, onAt) => <BuildPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
@@ -53,12 +56,18 @@ export default function Midterm({ part }: { part?: string }) {
     <div className="page mt">
       <span className="eyebrow">{t('期中考试 · МИДТЕРМ', '期中考试 · MIDTERM')}</span>
       <h1 className="serif h1">{t('Подготовка к мидтерму', 'Midterm prep')}</h1>
-      <p className="muted lead">{t('《汉语教程》 книга 1A, уроки 1–7: все слова из книги и три формата заданий, как на мидтерме.', '《汉语教程》 Book 1A, lessons 1–7: every word from the book and the three task types of the midterm.')}</p>
+      <p className="muted lead">{t('《汉语教程》 книга 1A, уроки 1–8: все слова из книги и задания, как на мидтерме.', '《汉语教程》 Book 1A, lessons 1–8: every word from the book and the tasks of the midterm.')}</p>
 
-      <a className="panel mt-pdf" href={`${import.meta.env.BASE_URL}files/jc1a-1-7.pdf`} target="_blank" rel="noopener">
+      <a className="panel mt-pdf mt-paper" href="#/midterm/paper">
+        <span className="mt-zh zh">卷</span>
+        <div><h3>{t('📝 Тест как у преподавателя', '📝 The teacher’s practice test')}</h3>
+          <p className="muted small">{t('Задания с листов 《初级汉语》 試卷: пиньинь по иероглифам, слова из списка A–J, диалоги, счётные слова — те же слова, баллы до 100. И слайд «Write the correct 汉字».', 'The tasks from the 《初级汉语》 test sheets: pinyin, words from the A–J box, dialogues, measure words — same words, up to 100 points. Plus the “Write the correct 汉字” slide.')}</p></div>
+      </a>
+
+      <a className="panel mt-pdf" href={`${import.meta.env.BASE_URL}files/jc1a-1-8.pdf`} target="_blank" rel="noopener">
         <span className="mt-zh zh">词</span>
-        <div><h3>{t('📄 Все слова уроков 1–7 (PDF)', '📄 All words of lessons 1–7 (PDF)')}</h3>
-          <p className="muted small">{t('153 слова: иероглиф, пиньинь, перевод и как запомнить каждый иероглиф (из каких деталей он состоит). В конце — листы «Проверь себя» с клетками для письма.', '153 words: character, pinyin, meaning and how to remember each character (its parts), plus “test yourself” sheets with writing boxes.')}</p></div>
+        <div><h3>{t('📄 Все слова уроков 1–8 (PDF)', '📄 All words of lessons 1–8 (PDF)')}</h3>
+          <p className="muted small">{t('179 слов: иероглиф, пиньинь, перевод и как запомнить каждый иероглиф (из каких деталей он состоит). В конце — листы «Проверь себя» с клетками для письма.', '179 words: character, pinyin, meaning and how to remember each character (its parts), plus “test yourself” sheets with writing boxes.')}</p></div>
       </a>
 
       <section className="panel mt-lessons">

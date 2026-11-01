@@ -1,5 +1,5 @@
 /**
- * Midterm practice for 《汉语教程》 Book 1A, lessons 1–7.
+ * Midterm practice for 《汉语教程》 Book 1A, lessons 1–8.
  *
  * The words come straight from the book's lessons; the sentences below are
  * written for this site and use only vocabulary from those seven lessons, so
@@ -8,7 +8,7 @@
  */
 
 export const MIDTERM_BOOK = 'jc1a';
-export const MIDTERM_LESSONS = [1, 2, 3, 4, 5, 6, 7];
+export const MIDTERM_LESSONS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 /** «__» marks the gap; the right word and two that do not fit. */
 export interface FillItem { lesson: number; zh: string; answer: string; wrong: [string, string]; py: string; ru: string; en: string }
@@ -64,6 +64,11 @@ export const FILL: FillItem[] = [
   f(7, '你喝__吗？', '啤酒', ['包子', '米饭'], 'Nǐ hē píjiǔ ma?', 'Будешь пиво?', 'Will you have a beer?'),
   f(7, '中午你去__吃饭？', '哪儿', ['什么', '谁'], 'Zhōngwǔ nǐ qù nǎr chī fàn?', 'Куда ты пойдёшь обедать?', 'Where are you going for lunch?'),
   f(7, '我要一碗鸡蛋__。', '汤', ['酒', '茶'], 'Wǒ yào yì wǎn jīdàn tāng.', 'Мне миску супа с яйцом.', 'A bowl of egg soup for me.'),
+  f(8, '你给我100块，我__你10块。', '找', ['去', '学'], 'Nǐ gěi wǒ yìbǎi kuài, wǒ zhǎo nǐ shí kuài.', 'Ты даёшь мне 100 юаней, я даю тебе 10 сдачи.', 'You give me 100 yuan, I give you 10 change.'),
+  f(8, '还要__吗？', '别的', ['明天', '认识'], 'Hái yào bié de ma?', 'Ещё что-нибудь?', 'Anything else?'),
+  f(8, '苹果多少钱一__？', '斤', ['本', '碗'], 'Píngguǒ duōshao qián yì jīn?', 'Сколько стоит цзинь яблок?', 'How much is a jin of apples?'),
+  f(8, '太贵了，便宜一__儿吧。', '点', ['本', '斤'], 'Tài guì le, piányi yìdiǎnr ba.', 'Слишком дорого, давайте подешевле.', 'Too expensive, a bit cheaper, please.'),
+  f(8, '一共多少__？', '钱', ['去', '好'], 'Yígòng duōshao qián?', 'Сколько всего?', 'How much altogether?'),
 ];
 
 export const BUILD: BuildItem[] = [
@@ -91,6 +96,9 @@ export const BUILD: BuildItem[] = [
   b(7, '我 要 三 个 包子 。', 'Wǒ yào sān ge bāozi.', 'Мне три баоцзы.', 'Three baozi for me.'),
   b(7, '你 喝 啤酒 吗 ？', 'Nǐ hē píjiǔ ma?', 'Будешь пиво?', 'Will you have a beer?'),
   b(7, '中午 你 去 食堂 吗 ？', 'Zhōngwǔ nǐ qù shítáng ma?', 'Ты пойдёшь в обед в столовую?', 'Are you going to the canteen at noon?', '你 中午 去 食堂 吗 ？'),
+  b(8, '苹果 多少 钱 一 斤 ？', 'Píngguǒ duōshao qián yì jīn?', 'Сколько стоит цзинь яблок?', 'How much is a jin of apples?', '苹果 一 斤 多少 钱 ？'),
+  b(8, '还 要 别的 吗 ？', 'Hái yào bié de ma?', 'Ещё что-нибудь?', 'Anything else?'),
+  b(8, '太 贵 了 ， 便宜 一点儿 吧 。', 'Tài guì le, piányi yìdiǎnr ba.', 'Слишком дорого, давайте подешевле.', 'Too expensive, a bit cheaper, please.'),
 ];
 
 export const ANSWER: AnswerItem[] = [
@@ -115,4 +123,7 @@ export const ANSWER: AnswerItem[] = [
   a(7, '你要几个包子？', 'Nǐ yào jǐ ge bāozi?', 'Сколько тебе баоцзы?', 'How many baozi do you want?', '我 要 三 个 包子 。', 'Wǒ yào sān ge bāozi.', 'Мне три баоцзы.', 'Three baozi for me.'),
   a(7, '你喝啤酒吗？', 'Nǐ hē píjiǔ ma?', 'Будешь пиво?', 'Will you have a beer?', '我 不 喝 啤酒 。', 'Wǒ bù hē píjiǔ.', 'Я не буду пиво.', 'I won’t have beer.'),
   a(7, '中午你去哪儿吃饭？', 'Zhōngwǔ nǐ qù nǎr chī fàn?', 'Где ты обедаешь?', 'Where are you having lunch?', '我 去 食堂 吃 饭 。', 'Wǒ qù shítáng chī fàn.', 'Я иду обедать в столовую.', 'I am going to the canteen to eat.'),
+  a(8, '苹果多少钱一斤？', 'Píngguǒ duōshao qián yì jīn?', 'Сколько стоит цзинь яблок?', 'How much is a jin of apples?', '苹果 两 块 五 一 斤 。', 'Píngguǒ liǎng kuài wǔ yì jīn.', 'Яблоки — два с половиной юаня за цзинь.', 'Apples are 2.5 yuan a jin.'),
+  a(8, '苹果两块五一斤。', 'Píngguǒ liǎng kuài wǔ yì jīn.', 'Яблоки — два с половиной юаня за цзинь.', 'Apples are 2.5 yuan a jin.', '太 贵 了 ， 便宜 一点儿 吧 。', 'Tài guì le, piányi yìdiǎnr ba.', 'Слишком дорого, давайте подешевле.', 'Too expensive, a bit cheaper, please.'),
+  a(8, '你要几斤？', 'Nǐ yào jǐ jīn?', 'Сколько цзиней тебе?', 'How many jin do you want?', '我 要 两 斤 。', 'Wǒ yào liǎng jīn.', 'Мне два цзиня.', 'Two jin for me.'),
 ];

@@ -53,7 +53,7 @@ export function markTone(base: string, tone: Tone): string {
 }
 
 /** "nǐ hǎo" with one syllable's tone changed. */
-function retone(py: string, which: number, tone: Tone): string {
+export function retone(py: string, which: number, tone: Tone): string {
   let k = -1;
   return py.replace(/[\p{L}ü]+/gu, (syl) => { k += 1; return k === which ? markTone(stripTone(syl), tone) : syl; });
 }
