@@ -18,8 +18,15 @@ const lessons = B.lessons.filter((l) => l.n >= +from && l.n <= +to);
 // How to remember each character: its parts and a short story (scripts/books/<book>-hanzi.tsv).
 const NOTES = JSON.parse(fs.readFileSync('src/content/hanzi-notes.json', 'utf8')).notes;
 
-const FONT = path.join(ROOT, '.cache/NotoSansSC-var.ttf');
-if (!fs.existsSync(FONT)) throw new Error('Run "npm run font" first: it downloads the Noto Sans SC face into .cache/.');
+const VAR_FONT = path.join(ROOT, '.cache/NotoSansSC-var.ttf');
+if (!fs.existsSync(VAR_FONT)) throw new Error('Run "npm run font" first: it downloads the Noto Sans SC face into .cache/.');
+// A variable font ends up as Type 3 glyphs in Chromium's PDF, which iPhone
+// and messenger previews often show blank. Static weights embed as normal fonts.
+const FONT = {};
+for (const w of [400, 700]) {
+  FONT[w] = path.join(ROOT, `.cache/NotoSansSC-${w}.ttf`);
+  if (!fs.existsSync(FONT[w])) execSync(`python3 -m fontTools.varLib.instancer ${VAR_FONT} wght=${w} -o ${FONT[w]} -q`, { stdio: 'inherit' });
+}
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const HAN = /\p{Script=Han}/u;
@@ -64,7 +71,8 @@ const test = lessons.map((l) => `
   </section>`).join('');
 
 const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>bai.kun · 汉语教程 1A · уроки ${from}–${to}</title><style>
-@font-face { font-family: 'Noto Sans SC'; src: url('file://${FONT}'); font-weight: 100 900; }
+@font-face { font-family: 'Noto Sans SC'; src: url('file://${FONT[400]}'); font-weight: 400; }
+@font-face { font-family: 'Noto Sans SC'; src: url('file://${FONT[700]}'); font-weight: 600 900; }
 @page { size: A4; margin: 14mm 12mm 16mm; }
 * { box-sizing: border-box; }
 body { font-family: 'Noto Sans SC', sans-serif; color: #1d1d1f; font-size: 11pt; margin: 0; }
