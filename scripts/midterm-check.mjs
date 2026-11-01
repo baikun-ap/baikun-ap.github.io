@@ -149,10 +149,28 @@ await page.click('text=Проверить иероглифы');
 check((await page.locator('.fc-ghost').innerText()) === '八', 'the right character appears over the drawing');
 await page.screenshot({ path: `${OUT}/write-free-check.png`, fullPage: true });
 await page.click('text=Написал(а) верно');
+check(await page.locator('.mt-reveal .nt-row').first().innerText().then((s) => s.includes('八')), 'the answer shows how to remember 八');
 check(await page.locator('.quiz-foot .verdict.ok').isVisible(), 'self-check “wrote it right” counts as correct');
 await page.click('.quiz-foot .btn.primary');
 check((await page.locator('.q-ru').innerText()).trim() === 'белый', 'next word follows the book');
 await page.click('.mt-modes input[type=checkbox]');   // pinyin back on for other checks
+
+// Parts: every character of lessons 1–15 has a note, the overview, a character page, notes in lessons.
+await go('parts');
+await page.screenshot({ path: `${OUT}/parts.png`, fullPage: true });
+check((await page.locator('.nt-card').count()) === 11, 'lesson 1 lists its 11 new characters');
+let total = 0;
+for (let n = 1; n <= 15; n++) { await page.click(`.nt-lessons .chip:text-is("${n}")`); total += await page.locator('.nt-card').count(); }
+check(total === 312, `lessons 1–15 cover all 312 characters (${total})`);
+check((await page.locator('.nt-part').count()) >= 40, 'the main parts are listed');
+await go('parts/好');
+await page.screenshot({ path: `${OUT}/parts-hao.png`, fullPage: true });
+check((await page.locator('.nt-piece').count()) === 2 && (await page.locator('.nt-story').innerText()).includes('женщина'), '好 shows 女 + 子 and its story');
+await go('lesson/jc1a-2/1');
+await page.waitForTimeout(800);
+check((await page.locator('.hz-step .nt-row').count()) >= 1, 'lesson step 1 shows how to remember the word');
+await go('hanzi/好');
+check((await page.locator('.nt-row').count()) === 1, 'the dictionary page shows the note');
 
 check(errors.length === 0, `no page errors ${errors.join(' | ')}`);
 await b.close(); server.close();

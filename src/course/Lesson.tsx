@@ -8,6 +8,7 @@ import { listen, listenSupported, scoreSpeech, hanOnly, type Match } from './lis
 import CardReview from './CardReview';
 import { cardIdOf, dueCards } from './store';
 import { L as tr, t } from '../i18n';
+import { CharNotes } from './Notes';
 
 export default function Lesson({ id, step }: { id: string; step: number }) {
   const lesson = LESSON_BY_ID.get(id);
@@ -94,6 +95,7 @@ function HanziStep({ lesson, onDone }: { lesson: L; onDone: () => void }) {
           <Py text={w.py} className="py-l" />
           <p className="hz-ru">{tr(w.ru)}{w.note && <span className="muted"> · {tr(w.note)}</span>}</p>
           <Say text={w.zh} big auto={i} />
+          <CharNotes zh={w.zh} />
         </div>
         <div className="hz-stroke">
           {chars.length > 1 && <div className="row center">{chars.map((c, k) => <button key={k} className={`chip zh ${k === ci ? 'on' : ''}`} onClick={() => setCi(k)}>{c}</button>)}</div>}

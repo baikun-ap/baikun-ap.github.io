@@ -13,6 +13,7 @@ import { today } from '../lib/date';
 import { loadState, saveState } from '../lib/db';
 import { cloudConfigured } from './cloud';
 import type { AppState } from '../lib/types';
+import { CharNotes } from './Notes';
 import { L, plural, setLang, t, useLang } from '../i18n';
 
 /* ---------- helpers ---------- */
@@ -295,6 +296,7 @@ export function Hanzi({ char }: { char?: string }) {
             <Py text={h.py} className="py-l" />
             <p className="hz-ru">{t(h.ru || h.en, h.en || h.ru)}</p>
             <Say text={h.c} big />
+            <CharNotes zh={h.c} />
             <dl className="facts">
               {h.strokes && <><dt>{t('Черт', 'Strokes')}</dt><dd>{h.strokes}</dd></>}
               {h.radical && <><dt>{t('Ключ', 'Radical')}</dt><dd className="zh">{h.radical}</dd></>}

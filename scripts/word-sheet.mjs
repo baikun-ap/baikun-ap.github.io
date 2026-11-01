@@ -1,5 +1,6 @@
 // Printable word list for a book's lessons: characters, pinyin coloured by
-// tone, the meaning and a character-by-character breakdown, then "test
+// tone, the meaning and how to remember each character (its parts and a
+// short story, given once where the character first appears), then "test
 // yourself" sheets with empty boxes for writing. Rendered to PDF in Chromium.
 //
 // Run: node scripts/word-sheet.mjs jc1a 1 7   →   public/files/jc1a-1-7.pdf
@@ -14,10 +15,8 @@ execSync('npx rolldown src/course/data.ts --format esm --platform node --file .c
 const { BOOKS } = await import(`${path.join(ROOT, '.cache/data.mjs')}?${Date.now()}`);
 const B = BOOKS.find((b) => b.id === book);
 const lessons = B.lessons.filter((l) => l.n >= +from && l.n <= +to);
-const charsFile = `scripts/books/${book}-chars.tsv`;
-const GLOSS = new Map(fs.existsSync(charsFile)
-  ? fs.readFileSync(charsFile, 'utf8').split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split('\t'))
-  : []);
+// How to remember each character: its parts and a short story (scripts/books/<book>-hanzi.tsv).
+const NOTES = JSON.parse(fs.readFileSync('src/content/hanzi-notes.json', 'utf8')).notes;
 
 const FONT = path.join(ROOT, '.cache/NotoSansSC-var.ttf');
 if (!fs.existsSync(FONT)) throw new Error('Run "npm run font" first: it downloads the Noto Sans SC face into .cache/.');
@@ -32,11 +31,12 @@ const SYL = new RegExp(`(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw])?[${V}]+(ng(?![${V}])|n
 const toneOf = (s) => { for (const ch of s.normalize('NFD')) { const t = { '̄': 1, '́': 2, '̌': 3, '̀': 4 }[ch]; if (t) return t; } return 5; };
 const py = (text) => esc(text).replace(SYL, (m) => `<span class="t${toneOf(m)}">${m}</span>`);
 
-const breakdown = (zh) => {
-  const cs = [...zh].filter((c) => HAN.test(c));
-  if (cs.length < 2) return '';
-  return cs.map((c) => `<span class="zh">${c}</span> ${esc(GLOSS.get(c) ?? '')}`).join(' + ');
-};
+const explained = new Set();
+const breakdown = (zh) => [...new Set(zh)].filter((c) => HAN.test(c) && NOTES[c] && !explained.has(c)).map((c) => {
+  explained.add(c);
+  const n = NOTES[c];
+  return `<div><span class="zh bc">${c}</span>${n.p.length ? ` = <span class="zh">${n.p.join(' + ')}</span>` : ''} — ${esc(n.ru)}</div>`;
+}).join('');
 
 const total = lessons.reduce((n, l) => n + l.words.length, 0);
 const list = lessons.map((l) => `
@@ -46,7 +46,7 @@ const list = lessons.map((l) => `
       <thead><tr><th>№</th><th>汉字</th><th>Пиньинь</th><th>Перевод</th></tr></thead>
       <tbody>${l.words.map((w, k) => `
         <tr><td class="n">${k + 1}</td><td class="zh big">${esc(w.zh)}</td><td class="py">${py(w.py)}</td>
-          <td>${esc(w.ru)}${breakdown(w.zh) ? `<div class="bd">${breakdown(w.zh)}</div>` : ''}</td></tr>`).join('')}
+          <td>${esc(w.ru)}${((bd) => (bd ? `<div class="bd">${bd}</div>` : ''))(breakdown(w.zh))}</td></tr>`).join('')}
       </tbody>
     </table>
   </section>`).join('');
@@ -87,6 +87,8 @@ td.big { font-size: 22pt; width: 120px; white-space: nowrap; }
 td.py { font-size: 13pt; width: 150px; }
 .bd { font-size: 8.5pt; color: #6e6e73; margin-top: 2px; }
 .bd .zh { color: #1d1d1f; font-size: 10pt; }
+.bd > div { margin-top: 1px; }
+.bd .bc { font-size: 12pt; font-weight: 600; }
 .t1 { color: #2f6fd1; } .t2 { color: #188a50; } .t3 { color: #b06a00; } .t4 { color: #c03c8a; } .t5 { color: #86868b; }
 .part { break-before: page; }
 .test td { height: 40px; }
@@ -98,14 +100,15 @@ td.py { font-size: 13pt; width: 150px; }
 <header>
   <div class="brand">bai.kun · baikun-ap.github.io</div>
   <h1>《汉语教程》 1A · Уроки ${from}–${to}</h1>
-  <p>Все слова к мидтерму: ${total} слов. Иероглиф, пиньинь, перевод и разбор по иероглифам.</p>
+  <p>Все слова уроков ${from}–${to}: ${total} слов. Иероглиф, пиньинь, перевод и как запомнить каждый иероглиф: из каких деталей он состоит.</p>
 </header>
 <div class="tips"><b>Как учить</b>
   <ol>
     <li>Прочитай урок вслух по пиньиню. Цвет — тон: <span class="legend"><span class="t1">1 ˉ</span><span class="t2">2 ˊ</span><span class="t3">3 ˇ</span><span class="t4">4 ˋ</span><span class="t5">· нейтральный</span></span></li>
+    <li>Под переводом — как запомнить каждый новый иероглиф: из каких деталей он собран (好 = 女 + 子). Объяснение даётся один раз, там, где знак встречается впервые.</li>
     <li>Закрой правые колонки и вспоминай значение по иероглифу, потом наоборот.</li>
     <li>Распечатай листы «Проверь себя» в конце: по переводу пиши пиньинь и иероглифы в клетках, потом сверяйся.</li>
-    <li>На сайте: вкладка «Мидтерм» → «Написание» — то же самое с проверкой.</li>
+    <li>На сайте: «Письмо» — пиши по памяти без подсказок; «Детали» — все детали и иероглифы по урокам.</li>
   </ol>
 </div>
 ${list}

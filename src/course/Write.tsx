@@ -5,6 +5,7 @@ import { autoMark, checkPinyin, shuffle } from './exercises';
 import { hanOnly } from './listen';
 import { Py, Say, StrokeBox, useCourseCtx } from './ui';
 import { L, t } from '../i18n';
+import { CharNotes } from './Notes';
 
 /**
  * Writing practice: see the meaning, write the pinyin and the characters from
@@ -250,6 +251,7 @@ export function WritePart({ items, onFinish, start, onAt }: { items: WriteWord[]
             <div className="zh-xxl">{w.zh}</div>
             <Py text={w.py} className="py-l" />
             <Say text={w.zh} />
+            <CharNotes zh={w.zh} />
             {selfCheck && (
               <div className="row center">
                 <button className="btn" onClick={() => setHz(false)}>{t('Ошибся', 'Got it wrong')}</button>
@@ -346,6 +348,7 @@ export default function WritePage({ go }: { go?: string }) {
           <button className={order === 'mix' ? 'on' : ''} onClick={() => setOrder('mix')}>{t('Вперемешку', 'Shuffled')}</button>
         </div>
       </div>
+      <a className="panel nt-link" href="#/parts"><span className="zh">部</span><span><b>{t('Как запомнить иероглифы', 'How to remember characters')}</b><br /><span className="small muted">{t('Из каких деталей состоит каждый иероглиф уроков 1–15 и короткая история для запоминания →', 'The parts of every character in lessons 1–15 and a short story to remember it →')}</span></span></a>
       <p className="muted">{t(`Выбрано: ${words.length} слов, ${charCount} разных иероглифов.`, `Selected: ${words.length} words, ${charCount} different characters.`)}</p>
       <a className={`btn primary lg ${words.length ? '' : 'disabled'}`} href={words.length ? '#/write/go' : undefined} aria-disabled={!words.length}>{t('Начать писать', 'Start writing')}</a>
     </div>

@@ -58,7 +58,7 @@ export default function Midterm({ part }: { part?: string }) {
       <a className="panel mt-pdf" href={`${import.meta.env.BASE_URL}files/jc1a-1-7.pdf`} target="_blank" rel="noopener">
         <span className="mt-zh zh">词</span>
         <div><h3>{t('📄 Все слова уроков 1–7 (PDF)', '📄 All words of lessons 1–7 (PDF)')}</h3>
-          <p className="muted small">{t('153 слова: иероглиф, пиньинь, перевод и разбор по иероглифам. В конце — листы «Проверь себя» с клетками для письма. Можно распечатать.', '153 words: character, pinyin, Russian meaning and a breakdown by character, plus “test yourself” sheets with writing boxes. Printable.')}</p></div>
+          <p className="muted small">{t('153 слова: иероглиф, пиньинь, перевод и как запомнить каждый иероглиф (из каких деталей он состоит). В конце — листы «Проверь себя» с клетками для письма.', '153 words: character, pinyin, meaning and how to remember each character (its parts), plus “test yourself” sheets with writing boxes.')}</p></div>
       </a>
 
       <section className="panel mt-lessons">

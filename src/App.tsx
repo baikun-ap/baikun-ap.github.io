@@ -8,6 +8,7 @@ import Tones from './course/Tones';
 import { Cards, Course, Dashboard, Grammar, Hanzi, Pinyin, Settings } from './course/Pages';
 import Midterm from './course/Midterm';
 import WritePage from './course/Write';
+import PartsPage from './course/Notes';
 import { setLang, t, useLang } from './i18n';
 
 const nav = (): { href: string; key: string; label: string; zh: string; main?: boolean }[] => [
@@ -20,6 +21,7 @@ const nav = (): { href: string; key: string; label: string; zh: string; main?: b
   { href: '#/tones', key: 'tones', label: t('Тоны', 'Tones'), zh: '声' },
   { href: '#/grammar', key: 'grammar', label: t('Грамматика', 'Grammar'), zh: '法' },
   { href: '#/hanzi', key: 'hanzi', label: t('Иероглифы', 'Characters'), zh: '字' },
+  { href: '#/parts', key: 'parts', label: t('Детали', 'Parts'), zh: '部' },
   { href: '#/settings', key: 'settings', label: t('Настройки', 'Settings'), zh: '设' },
 ];
 
@@ -73,6 +75,7 @@ export default function App() {
       case 'cards': page = <Cards />; break;
       case 'midterm': page = <Midterm part={route[1]} />; break;
       case 'write': page = <WritePage go={route[1]} />; break;
+      case 'parts': page = <PartsPage char={route[1]} />; break;
       case 'pinyin': page = <Pinyin />; break;
       case 'tones': page = <Tones />; break;
       case 'grammar': page = <Grammar />; break;
