@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Word } from '../content/schema';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ANSWER, BUILD, FILL, MIDTERM_BOOK, MIDTERM_LESSONS, type AnswerItem, type BuildItem, type FillItem } from '../content/midterm';
 import { LESSON_BY_ID } from './data';
-import { autoMark, checkPinyin, shuffle } from './exercises';
-import { hanOnly } from './listen';
-import { Py, Say, StrokeBox, useCourseCtx } from './ui';
-import { L, t } from '../i18n';
+import { shuffle } from './exercises';
+import { Py, Say, useCourseCtx } from './ui';
+import { Progress, Runner, WritePart, readLS, useAt, writeLS, type Result, type WriteWord } from './Write';
+import { t } from '../i18n';
 
 /**
  * Midterm practice for Book 1A, lessons 1–7, in the three formats of the
@@ -14,17 +13,12 @@ import { L, t } from '../i18n';
  */
 
 const LS_LESSONS = 'baikun-midterm-lessons';
-const LS_WRITE = 'baikun-midterm-write';
 const LS_ORDER = 'baikun-midterm-order';
 
-const readLS = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
-const writeLS = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
-
-type MidWord = Word & { lesson: number };
+type MidWord = WriteWord;
 const wordsOf = (lessons: number[]): MidWord[] =>
   lessons.flatMap((n) => (LESSON_BY_ID.get(`${MIDTERM_BOOK}-${n}`)?.words ?? []).filter((w) => !w.zh.includes('…')).map((w) => ({ ...w, lesson: n })));
 
-interface Result { right: number; total: number; misses: string[] }
 
 /* ---------- page ---------- */
 
@@ -45,7 +39,8 @@ export default function Midterm({ part }: { part?: string }) {
   const arrange = <T,>(list: T[]) => (order === 'mix' ? shuffle(list) : list);
   const runner = <T,>(list: T[], run: (items: T[], done: (r: Result & { missed: T[] }) => void, start: number, onAt: (i: number) => void) => ReactNode) => (
     <Runner key={`${part}-${lessons.join()}-${order}`} make={() => arrange(list)} run={run}
-      resumeKey={order === 'book' ? `baikun-midterm-at-${part}-${lessons.join('')}` : undefined} />
+      resumeKey={order === 'book' ? `baikun-midterm-at-${part}-${lessons.join('')}` : undefined}
+      backHref="#/midterm" backLabel={t('К мидтерму', 'Back to midterm')} />
   );
 
   if (part === 'write') return <Shell title={t('1. Написание: иероглифы и пиньинь', '1. Writing: characters and pinyin')}>{runner(words, (items, done, start, onAt) => <WritePart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
@@ -117,173 +112,6 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
       <a className="back" href="#/midterm">← {t('Мидтерм', 'Midterm')}</a>
       <h1 className="serif h2">{title}</h1>
       {children}
-    </div>
-  );
-}
-
-/** Runs one part, then shows the score and offers to redo the misses. */
-function Runner<T>({ make, run, resumeKey }: {
-  make: () => T[]; resumeKey?: string;
-  run: (items: T[], done: (r: Result & { missed: T[] }) => void, start: number, onAt: (i: number) => void) => ReactNode;
-}) {
-  const [items, setItems] = useState(make);
-  const [round, setRound] = useState(0);
-  const [res, setResState] = useState<(Result & { missed: T[] }) | null>(null);
-  // Only the first full pass in book order resumes; redoing mistakes starts at the top.
-  const resumable = !!resumeKey && round === 0;
-  const [start, setStart] = useState(() => { const n = Number(resumeKey ? readLS(resumeKey) : 0) || 0; return n < items.length ? n : 0; });
-  const onAt = (i: number) => { if (resumable) writeLS(resumeKey!, String(i)); };
-  const setRes = (r: Result & { missed: T[] }) => { if (resumeKey) writeLS(resumeKey, '0'); setResState(r); };
-  if (!items.length) return <p className="muted">{t('Для выбранных уроков тут пока нет заданий.', 'No tasks for the chosen lessons yet.')}</p>;
-  if (res) {
-    const pct = Math.round((res.right / res.total) * 100);
-    return (
-      <div className="result">
-        <div className={`result-num ${pct < 80 ? 'bad' : ''}`}>{pct}%</div>
-        <p>{t(`Верно: ${res.right} из ${res.total}`, `Correct: ${res.right} of ${res.total}`)}</p>
-        {res.misses.length > 0 && <div className="mt-misses"><span className="small muted">{t('Ошибки', 'Mistakes')}:</span> <span className="zh">{res.misses.join('　')}</span></div>}
-        <div className="row center">
-          {res.missed.length > 0 && <button className="btn primary" onClick={() => { setItems(shuffle(res.missed)); setResState(null); setStart(0); setRound(round + 1); }}>{t('Повторить ошибки', 'Redo mistakes')}</button>}
-          <button className="btn" onClick={() => { setItems(make()); setResState(null); setStart(0); setRound(round + 1); }}>{t('Ещё раз', 'Again')}</button>
-          <a className="btn" href="#/midterm">{t('К мидтерму', 'Back to midterm')}</a>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div key={round}>
-      {resumable && start > 0 && (
-        <p className="small muted mt-note">{t(`Продолжаем с ${start + 1}-го задания.`, `Resuming at task ${start + 1}.`)} <button className="link-btn" onClick={() => { setStart(0); onAt(0); setRound(round + 1); }}>{t('Начать сначала', 'Start over')}</button></p>
-      )}
-      {run(items, setRes, resumable ? start : 0, onAt)}
-    </div>
-  );
-}
-
-/** Keeps the current task index in step with the runner's bookmark. */
-function useAt(start = 0, onAt?: (i: number) => void) {
-  const [i, setI] = useState(start);
-  useEffect(() => { onAt?.(i); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
-  return [i, setI] as const;
-}
-
-function Progress({ i, n }: { i: number; n: number }) {
-  return <div className="quiz-top"><span className="muted small">{i + 1} / {n}</span><span className="bar"><span style={{ width: `${(i / n) * 100}%` }} /></span></div>;
-}
-
-/* ---------- 1. writing ---------- */
-
-function WritePart({ items, onFinish, start, onAt }: { items: MidWord[]; onFinish: (r: Result & { missed: MidWord[] }) => void; start?: number; onAt?: (i: number) => void }) {
-  const { actions } = useCourseCtx();
-  const [i, setI] = useAt(start, onAt);
-  const [mode, setModeState] = useState<'screen' | 'paper'>(() => (readLS(LS_WRITE) === 'paper' ? 'paper' : 'screen'));
-  const setMode = (m: 'screen' | 'paper') => { setModeState(m); writeLS(LS_WRITE, m); };
-  const [py, setPy] = useState('');
-  const [pyRes, setPyRes] = useState<'ok' | 'tones' | 'wrong' | null>(null);
-  const [ci, setCi] = useState(0);
-  const [mistakes, setMistakes] = useState(0);
-  const [hz, setHz] = useState<boolean | null>(null);   // characters written right?
-  const [shown, setShown] = useState(false);
-  const [right, setRight] = useState(0);
-  const [missed, setMissed] = useState<MidWord[]>([]);
-  const w = items[i];
-  const chars = [...hanOnly(w.zh)];
-
-  const checkPy = () => { if (py.trim()) setPyRes(checkPinyin(py, w.py)); };
-  // Tones turn into marks as you type (ni3 → nǐ), and a right answer is accepted at once.
-  const typePy = (raw: string) => {
-    const v = autoMark(raw);
-    setPy(v);
-    if (checkPinyin(v, w.py) === 'ok') setPyRes('ok');
-  };
-  const addTone = (tone: number) => typePy(py.replace(/\s+$/, '') + tone);
-  const charDone = (m: number) => {
-    const total = mistakes + m;
-    setMistakes(total);
-    if (ci + 1 < chars.length) setCi(ci + 1);
-    else setHz(total <= chars.length);   // a slip per character still counts as written
-  };
-  const finished = pyRes !== null && hz !== null;
-  const ok = pyRes === 'ok' && hz === true;
-  const next = () => {
-    actions.answered(ok);
-    const r = right + (ok ? 1 : 0), m = ok ? missed : [...missed, w];
-    setRight(r); setMissed(m);
-    setPy(''); setPyRes(null); setCi(0); setMistakes(0); setHz(null); setShown(false);
-    if (i + 1 < items.length) setI(i + 1);
-    else onFinish({ right: r, total: items.length, misses: m.map((x) => x.zh), missed: m });
-  };
-
-  return (
-    <div className="quiz mt-write">
-      <Progress i={i} n={items.length} />
-      <div className="seg small">
-        <button className={mode === 'screen' ? 'on' : ''} onClick={() => setMode('screen')}>{t('✍ На экране', '✍ On screen')}</button>
-        <button className={mode === 'paper' ? 'on' : ''} onClick={() => setMode('paper')}>{t('📝 На бумаге', '📝 On paper')}</button>
-      </div>
-      <div className="q-prompt">
-        <p className="q-ask">{t('Напиши пиньинь и иероглифы', 'Write the pinyin and the characters')} <span className="muted small">· {t('урок', 'lesson')} {w.lesson}</span></p>
-        <div className="q-ru">{L(w.ru)}</div>
-        <p className="muted small">{t(`${chars.length} ${chars.length === 1 ? 'иероглиф' : chars.length < 5 ? 'иероглифа' : 'иероглифов'}`, `${chars.length} ${chars.length === 1 ? 'character' : 'characters'}`)}</p>
-      </div>
-
-      <form className="row mt-py" onSubmit={(e) => { e.preventDefault(); checkPy(); }}>
-        <input className="search" value={py} onChange={(e) => typePy(e.target.value)} disabled={pyRes !== null} autoCapitalize="off" autoCorrect="off" autoComplete="off" spellCheck={false}
-          placeholder={t('пиньинь, например ni3 → nǐ', 'pinyin, e.g. ni3 → nǐ')} style={{ marginBottom: 0 }} />
-        {pyRes === null && <button className="btn primary" disabled={!py.trim()}>{t('Проверить', 'Check')}</button>}
-      </form>
-      {pyRes === null && (
-        <div className="mt-tones">
-          {[1, 2, 3, 4].map((n) => (
-            <button key={n} type="button" className={`tone-key t${n}`} onMouseDown={(e) => e.preventDefault()} onClick={() => addTone(n)}
-              aria-label={t(`${n}-й тон`, `Tone ${n}`)}>{['', 'ā', 'á', 'ǎ', 'à'][n]}</button>
-          ))}
-          <button type="button" className="tone-key" onMouseDown={(e) => e.preventDefault()} onClick={() => typePy(py + 'ü')}>ü</button>
-          <button type="button" className="chip" onClick={() => setPyRes('wrong')}>{t('Не знаю', 'I don’t know')}</button>
-        </div>
-      )}
-      {pyRes === null && <p className="small muted mt-note">{t('Пиши слог и сразу цифру тона: ni3 → nǐ, hao3 → hǎo. Или нажми кнопку тона после слога. Верный ответ засчитается сам.', 'Type a syllable and its tone number: ni3 → nǐ, hao3 → hǎo. Or tap a tone button after the syllable. A right answer is accepted by itself.')}</p>}
-      {pyRes !== null && (
-        <p className={`verdict ${pyRes === 'ok' ? 'ok' : 'bad'}`}>
-          {pyRes === 'ok' ? t('Пиньинь верно!', 'Pinyin correct!') : pyRes === 'tones' ? t('Звуки верно, тоны — нет:', 'Sounds right, tones wrong:') : t('Неверно, правильно:', 'Wrong, correct:')} {pyRes !== 'ok' && <Py text={w.py} />}
-        </p>
-      )}
-
-      <div className="mt-hz">
-        {mode === 'screen' && hz === null && !shown && (
-          <>
-            <div className="row center">{chars.map((c, k) => <span key={k} className={`mt-slot ${k < ci ? 'done' : k === ci ? 'cur' : ''}`}>{k < ci ? c : '？'}</span>)}</div>
-            <StrokeBox key={`${i}-${ci}`} char={chars[ci]} size={220} mode="quiz" outline={false} onComplete={charDone} />
-            <button className="chip" onClick={() => { setShown(true); setHz(false); }}>{t('Не помню — показать', 'I don’t remember — show me')}</button>
-          </>
-        )}
-        {mode === 'paper' && hz === null && !shown && (
-          <button className="btn" onClick={() => setShown(true)}>{t('Написал(а) на бумаге — показать ответ', 'Wrote it on paper — show the answer')}</button>
-        )}
-        {(shown || hz !== null) && (
-          <div className="mt-reveal">
-            <div className="zh-xxl">{w.zh}</div>
-            <Py text={w.py} className="py-l" />
-            <Say text={w.zh} />
-            {mode === 'paper' && hz === null && (
-              <div className="row center">
-                <button className="btn" onClick={() => setHz(false)}>{t('Ошибся', 'Got it wrong')}</button>
-                <button className="btn primary" onClick={() => setHz(true)}>{t('Написал(а) верно', 'Wrote it right')}</button>
-              </div>
-            )}
-            {mode === 'screen' && hz === false && shown && <div className="row center">{chars.map((c, k) => <StrokeBox key={k} char={c} size={120} />)}</div>}
-          </div>
-        )}
-      </div>
-
-      <div className="quiz-foot">
-        {finished ? (
-          <>
-            <span className={`verdict ${ok ? 'ok' : 'bad'}`}>{ok ? t('Верно!', 'Correct!') : t('Есть ошибка — слово вернётся в «Повторить ошибки»', 'A mistake — the word goes to “Redo mistakes”')}</span>
-            <button className="btn primary" onClick={next} autoFocus>{t('Дальше', 'Next')}</button>
-          </>
-        ) : <span className="muted small">{pyRes === null ? t('Сначала пиньинь, потом иероглифы', 'Pinyin first, then the characters') : t('Теперь напиши иероглифы', 'Now write the characters')}</span>}
-      </div>
     </div>
   );
 }

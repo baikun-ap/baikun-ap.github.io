@@ -40,7 +40,7 @@ check(await page.locator('text=Все 12 слов').isVisible(), 'lesson filter 
 
 // 1. Writing on paper: a wrong pinyin, then "wrote it right" — every word ends up a miss.
 await go('midterm/write');
-await page.click('text=📝 На бумаге');
+await page.click('text=📝 Бумага');
 let n = 0;
 while (!(await resultShown()) && n++ < 20) {
   await page.fill('.mt-py input', 'zz1');
@@ -57,7 +57,7 @@ check((await page.locator('.quiz-top').count()) === 1, 'redo mistakes restarts')
 // 1. Writing on screen, from the top of lesson 1 again.
 await go('midterm');
 await go('midterm/write');
-await page.click('text=✍ На экране');
+await page.click('text=🎯 Черты');
 await page.waitForTimeout(900);
 check((await page.locator('.stroke-grid svg').count()) > 0, 'stroke quiz is drawn');
 await page.screenshot({ path: `${OUT}/write-screen.png`, fullPage: true });
@@ -111,7 +111,7 @@ check(n === 21 && await resultShown(), `answering ran all 21 questions (${n})`);
 
 // Practice midterm: 10 + 10 + 5 + 5.
 await go('midterm/exam');
-await page.click('text=📝 На бумаге');
+await page.click('text=📝 Бумага');
 let steps = 0;
 while (!(await resultShown()) && steps++ < 60) {
   if (await page.locator('.mt-py input:not([disabled])').count()) {
@@ -127,6 +127,32 @@ while (!(await resultShown()) && steps++ < 60) {
 }
 check(steps === 30 && (await page.locator('.mt-score li').count()) === 4, `practice midterm ran 30 tasks in 4 parts (${steps})`);
 await page.screenshot({ path: `${OUT}/exam-result.png`, fullPage: true });
+
+// Writing page: freehand on a blank grid, no hints, the right character laid over yours.
+await go('write');
+await page.screenshot({ path: `${OUT}/write-page.png`, fullPage: true });
+check((await page.locator('.x-tabs a[href="#/write"]').count()) === 1, 'writing has its own tab');
+check(await page.locator('text=Выбрано: 153 слов').isVisible(), 'writing defaults to lessons 1–7 (153 words)');
+await page.click('text=Начать писать');
+await page.waitForTimeout(500);
+await page.click('text=✍ Свободно');
+await page.click('.mt-modes input[type=checkbox]');   // characters only
+check((await page.locator('.mt-py').count()) === 0, 'pinyin can be switched off');
+check((await page.locator('.fc canvas').count()) === 1 && (await page.locator('.stroke-grid').count()) === 0, 'freehand shows a blank box and no stroke hints');
+const fc = await page.locator('.fc canvas').boundingBox();
+await page.mouse.move(fc.x + fc.width * 0.2, fc.y + fc.height * 0.3); await page.mouse.down();
+await page.mouse.move(fc.x + fc.width * 0.8, fc.y + fc.height * 0.3, { steps: 10 }); await page.mouse.up();
+const inked = await page.evaluate(() => { const c = document.querySelector('.fc canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < d.length; k += 4) if (d[k]) n++; return n; });
+check(inked > 200, `a drawn stroke leaves ink (${inked} px)`);
+await page.screenshot({ path: `${OUT}/write-free.png`, fullPage: true });
+await page.click('text=Проверить иероглифы');
+check((await page.locator('.fc-ghost').innerText()) === '八', 'the right character appears over the drawing');
+await page.screenshot({ path: `${OUT}/write-free-check.png`, fullPage: true });
+await page.click('text=Написал(а) верно');
+check(await page.locator('.quiz-foot .verdict.ok').isVisible(), 'self-check “wrote it right” counts as correct');
+await page.click('.quiz-foot .btn.primary');
+check((await page.locator('.q-ru').innerText()).trim() === 'белый', 'next word follows the book');
+await page.click('.mt-modes input[type=checkbox]');   // pinyin back on for other checks
 
 check(errors.length === 0, `no page errors ${errors.join(' | ')}`);
 await b.close(); server.close();

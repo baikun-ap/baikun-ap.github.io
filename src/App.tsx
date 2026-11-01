@@ -7,17 +7,19 @@ import Lesson from './course/Lesson';
 import Tones from './course/Tones';
 import { Cards, Course, Dashboard, Grammar, Hanzi, Pinyin, Settings } from './course/Pages';
 import Midterm from './course/Midterm';
+import WritePage from './course/Write';
 import { setLang, t, useLang } from './i18n';
 
 const nav = (): { href: string; key: string; label: string; zh: string; main?: boolean }[] => [
   { href: '#/', key: '', label: t('Главная', 'Home'), zh: '家', main: true },
   { href: '#/course', key: 'course', label: t('Курс', 'Course'), zh: '课', main: true },
   { href: '#/cards', key: 'cards', label: t('Карточки', 'Cards'), zh: '卡', main: true },
+  { href: '#/write', key: 'write', label: t('Письмо', 'Writing'), zh: '写', main: true },
   { href: '#/midterm', key: 'midterm', label: t('Мидтерм', 'Midterm'), zh: '考', main: true },
   { href: '#/pinyin', key: 'pinyin', label: t('Пиньинь', 'Pinyin'), zh: '拼' },
   { href: '#/tones', key: 'tones', label: t('Тоны', 'Tones'), zh: '声' },
   { href: '#/grammar', key: 'grammar', label: t('Грамматика', 'Grammar'), zh: '法' },
-  { href: '#/hanzi', key: 'hanzi', label: t('Иероглифы', 'Characters'), zh: '字', main: true },
+  { href: '#/hanzi', key: 'hanzi', label: t('Иероглифы', 'Characters'), zh: '字' },
   { href: '#/settings', key: 'settings', label: t('Настройки', 'Settings'), zh: '设' },
 ];
 
@@ -70,6 +72,7 @@ export default function App() {
       case 'lesson': page = <Lesson id={route[1]} step={Number(route[2]) || 1} />; break;
       case 'cards': page = <Cards />; break;
       case 'midterm': page = <Midterm part={route[1]} />; break;
+      case 'write': page = <WritePage go={route[1]} />; break;
       case 'pinyin': page = <Pinyin />; break;
       case 'tones': page = <Tones />; break;
       case 'grammar': page = <Grammar />; break;
