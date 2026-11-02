@@ -6,6 +6,7 @@ import { Py, Say, useCourseCtx } from './ui';
 import { Progress, Runner, WritePart, readLS, useAt, writeLS, type Result, type WriteWord } from './Write';
 import { t } from '../i18n';
 import Paper, { SlideWrite } from './Paper';
+import Exam18 from './Exam18';
 
 /**
  * Midterm practice for Book 1A, lessons 1–8, in the three formats of the
@@ -45,6 +46,7 @@ export default function Midterm({ part, sub }: { part?: string; sub?: string }) 
   );
 
   if (part === 'paper') return <Paper sub={sub} />;
+  if (part === 'words18') return <Exam18 sub={sub} />;
   if (part === 'slide') return <SlideWrite />;
   if (part === 'write') return <Shell title={t('1. Написание: иероглифы и пиньинь', '1. Writing: characters and pinyin')}>{runner(words, (items, done, start, onAt) => <WritePart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
   if (part === 'read') return <Shell title={t('2. Чтение: вставь слово', '2. Reading: fill the gap')}>{runner(fill, (items, done, start, onAt) => <FillPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
@@ -57,6 +59,12 @@ export default function Midterm({ part, sub }: { part?: string; sub?: string }) 
       <span className="eyebrow">{t('期中考试 · МИДТЕРМ', '期中考试 · MIDTERM')}</span>
       <h1 className="serif h1">{t('Подготовка к мидтерму', 'Midterm prep')}</h1>
       <p className="muted lead">{t('《汉语教程》 книга 1A, уроки 1–8: все слова из книги и задания, как на мидтерме.', '《汉语教程》 Book 1A, lessons 1–8: every word from the book and the tasks of the midterm.')}</p>
+
+      <a className="panel mt-pdf mt-paper" href="#/midterm/words18">
+        <span className="mt-zh zh">考</span>
+        <div><h3>{t('⭐ 18 слов к экзамену', '⭐ 18 words for the exam')}</h3>
+          <p className="muted small">{t('Слова со слайда, которые будут на экзамене, в пяти типах заданий: иероглифы по пиньиню, пиньинь по иероглифам, предложение со словом, ответ на вопрос иероглифами, счётное слово.', 'The slide words that will be on the exam, in five task types: characters from pinyin, pinyin from characters, a sentence with the word, answering in hanzi, measure words.')}</p></div>
+      </a>
 
       <a className="panel mt-pdf mt-paper" href="#/midterm/paper">
         <span className="mt-zh zh">卷</span>

@@ -214,6 +214,38 @@ await go('midterm/slide');
 check((await page.locator('.q-ru .py').innerText()).replace(/\s/g, '').toLowerCase() === 'hànyǔ' && (await page.locator('.mt-py').count()) === 0, 'the slide shows pinyin and asks for characters only');
 await page.screenshot({ path: `${OUT}/slide.png`, fullPage: true });
 
+// 18 words for the exam, in the teacher's five question types.
+await go('midterm/words18');
+await page.screenshot({ path: `${OUT}/words18.png`, fullPage: true });
+check((await page.locator('.ex-word').count()) === 18 && (await page.locator('.ex-type').count()) === 5, 'the 18 words and 5 task types are listed');
+await go('midterm/words18/pinyin');
+const P18 = ['han4yu3', 'you2ju2', 'shen1ti3', 'gui4xing4', 'man2tou', 'yu3fa3', 'ying1yu3', 'yin2hang2', 'gong1zuo4', 'mi3fan4', 'pi2jiu3', 'fa1yin1', 'ming2zi', 'bao1zi', 'qing3 jin4', 'yao4', 'chi1', 'shen2me'];
+const b18 = await page.locator('.paper-py input').all();
+for (let k = 0; k < b18.length; k++) await b18[k].pressSequentially(P18[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 18 из 18').isVisible(), 'pinyin from characters: 18 of 18');
+await go('midterm/words18/answer');
+const SAMPLES = ['我学习汉语', '我去邮局', '对我去银行取钱', '我姓王', '我叫马丁', '我身体很好谢谢', '我工作很忙', '我吃米饭', '我不吃馒头我吃米饭', '我不喝啤酒', '我要三个包子', '汉语语法不太难', '汉语发音很难', '我不学英语我学汉语', '我要一碗米饭'];
+const ai = await page.locator('.pd-blank input').all();
+check(ai.length === 15, `15 questions (${ai.length})`);
+for (let k = 0; k < ai.length; k++) await ai[k].fill(SAMPLES[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 15 из 15').isVisible(), 'answer the questions: sample answers accepted');
+await go('midterm/words18/make');
+const mk = await page.locator('.paper-rows input').all();
+const MK = ['我学习汉语', '我去邮局寄信', '我身体很好', '请问您贵姓', '我要两个馒头', '汉语语法不太难', '我妹妹学英语', '我去银行取钱', '我爸爸工作很忙', '我要一碗米饭', '我不喝啤酒', '汉语发音很难', '你叫什么名字', '我要三个包子', '老师请进', '我要一碗汤', '我吃饺子', '你学习什么'];
+for (let k = 0; k < mk.length; k++) await mk[k].fill(MK[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 18 из 18').isVisible(), 'make sentences: sentences with the word count');
+await go('midterm/words18/measure');
+const M18 = ['碗', '个', '个', '瓶', '本', '碗', '斤', '杯', '支', '盘'];
+const ms18 = await page.locator('.paper-sel').all();
+for (let k = 0; k < ms18.length; k++) await ms18[k].selectOption(M18[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 10 из 10').isVisible(), 'measure words for the 18: 10 of 10');
+await go('midterm/words18/hanzi');
+check((await page.locator('.q-ru .py').innerText()).replace(/\s/g, '').toLowerCase() === 'hànyǔ' && (await page.locator('.fc canvas, .stroke-grid').count()) > 0, 'characters from pinyin starts with hànyǔ and a writing box');
+
 check(errors.length === 0, `no page errors ${errors.join(' | ')}`);
 await b.close(); server.close();
 if (fails.length) { console.log(`${fails.length} failed`); process.exit(1); }

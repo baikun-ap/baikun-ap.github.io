@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  MEASURE_GLOSS, PAPER_BANK, PAPER_DIALOGUES, PAPER_FILL, PAPER_MEASURE, PAPER_MEASURE_BANK, PAPER_PINYIN, SLIDE_WORDS, type DialogueBlank,
+  MEASURE_GLOSS, PAPER_BANK, PAPER_DIALOGUES, PAPER_FILL, PAPER_MEASURE, PAPER_MEASURE_BANK, PAPER_PINYIN, SLIDE_WORDS, type DialogueBlank, type DialogueLine,
 } from '../content/midterm-paper';
 import { LESSONS, WORD_BY_ZH } from './data';
 import { autoMark, checkPinyin, retone, shuffle, tonesOf } from './exercises';
@@ -14,8 +14,8 @@ import type { Tone } from '../lib/pinyin';
  * and points, plus the "Write the correct 汉字" slide.
  */
 
-interface Score { got: number; max: number; misses: string[] }
-type Done = (s: Score) => void;
+export interface Score { got: number; max: number; misses: string[] }
+export type Done = (s: Score) => void;
 
 const SECTIONS = [
   { key: 'listen', n: '一', zh: '听录音，选择正确的拼音', ru: 'Послушай и выбери правильный пиньинь', en: 'Listen and choose the right pinyin', pts: 20, note: ['Первую страницу ты не сфотографировал — задание собрано сайтом в том же формате.', 'The first page was not photographed — this part is generated in the same format.'] },
@@ -140,7 +140,7 @@ function All() {
 }
 
 /** The check button, then the score line and a button to go on. */
-function Foot({ checked, onCheck, score, onDone, ready = true }: { checked: boolean; onCheck: () => void; score: Score; onDone: Done; ready?: boolean }) {
+export function Foot({ checked, onCheck, score, onDone, ready = true }: { checked: boolean; onCheck: () => void; score: Score; onDone: Done; ready?: boolean }) {
   const { actions } = useCourseCtx();
   return (
     <div className="quiz-foot">
@@ -195,17 +195,17 @@ function Listen({ onDone }: { onDone: Done }) {
 
 /* ---------- 三 pinyin for characters ---------- */
 
-function PinyinTask({ onDone }: { onDone: Done }) {
-  const [vals, setVals] = useState(() => PAPER_PINYIN.map(() => ''));
+export function PinyinTask({ onDone, items = PAPER_PINYIN }: { onDone: Done; items?: { zh: string; py: string }[] }) {
+  const [vals, setVals] = useState(() => items.map(() => ''));
   const [active, setActive] = useState(0);
   const [checked, setChecked] = useState(false);
-  const res = PAPER_PINYIN.map((x, k) => checkPinyin(vals[k], x.py));
+  const res = items.map((x, k) => checkPinyin(vals[k], x.py));
   const set = (k: number, v: string) => setVals(vals.map((x, m) => (m === k ? autoMark(v) : x)));
-  const score = { got: res.filter((r) => r === 'ok').length, max: PAPER_PINYIN.length, misses: PAPER_PINYIN.filter((_, k) => res[k] !== 'ok').map((x) => x.zh) };
+  const score = { got: res.filter((r) => r === 'ok').length, max: items.length, misses: items.filter((_, k) => res[k] !== 'ok').map((x) => x.zh) };
   return (
     <>
       <div className="paper-grid">
-        {PAPER_PINYIN.map((x, k) => (
+        {items.map((x, k) => (
           <label key={x.zh} className={`paper-py ${checked ? (res[k] === 'ok' ? 'ok' : 'bad') : ''}`}>
             <input className="search" value={vals[k]} disabled={checked} onFocus={() => setActive(k)} onChange={(e) => set(k, e.target.value)}
               autoCapitalize="off" autoCorrect="off" autoComplete="off" spellCheck={false} placeholder="(        )" />
@@ -260,19 +260,19 @@ function Fill({ onDone }: { onDone: Done }) {
 const clean = (s: string) => s.replace(/[\s，。！？、,.!?；;：:“”"'（）()…]/g, '');
 const matchBlank = (b: DialogueBlank, v: string) => !!clean(v) && b.ok.some((p) => new RegExp(p, 'u').test(clean(v)));
 
-function Dialogues({ onDone }: { onDone: Done }) {
-  const blanks = useMemo(() => PAPER_DIALOGUES.flatMap((d, i) => d.map((l, j) => (l.blank ? `${i}-${j}` : null)).filter(Boolean) as string[]), []);
+export function Dialogues({ onDone, data = PAPER_DIALOGUES, tip = true }: { onDone: Done; data?: DialogueLine[][]; tip?: boolean }) {
+  const blanks = useMemo(() => data.flatMap((d, i) => d.map((l, j) => (l.blank ? `${i}-${j}` : null)).filter(Boolean) as string[]), []);
   const [vals, setVals] = useState<Record<string, string>>({});
   const [own, setOwn] = useState<Record<string, boolean>>({});   // "my answer is right too"
   const [checked, setChecked] = useState(false);
   const isOk = (id: string, b: DialogueBlank) => own[id] || matchBlank(b, vals[id] ?? '');
-  const okCount = blanks.filter((id) => { const [i, j] = id.split('-').map(Number); return isOk(id, PAPER_DIALOGUES[i][j].blank!); }).length;
-  const score = { got: okCount, max: blanks.length, misses: blanks.filter((id) => { const [i, j] = id.split('-').map(Number); return !isOk(id, PAPER_DIALOGUES[i][j].blank!); }).map((id) => PAPER_DIALOGUES[Number(id.split('-')[0])][Number(id.split('-')[1])].blank!.sample[0].zh) };
+  const okCount = blanks.filter((id) => { const [i, j] = id.split('-').map(Number); return isOk(id, data[i][j].blank!); }).length;
+  const score = { got: okCount, max: blanks.length, misses: blanks.filter((id) => { const [i, j] = id.split('-').map(Number); return !isOk(id, data[i][j].blank!); }).map((id) => data[Number(id.split('-')[0])][Number(id.split('-')[1])].blank!.sample[0].zh) };
   return (
     <>
-      <p className="small muted mt-note">{t('Печатай по-китайски (клавиатура iPhone: Настройки → Основные → Клавиатура → Клавиатуры → Новые → Китайский упрощ. → Пиньинь) или пиши на бумаге и оставь поле пустым — после проверки сравни с образцом и отметь сам.', 'Type in Chinese (iPhone: Settings → General → Keyboard → Keyboards → Add → Chinese Simplified → Pinyin) or write on paper and leave the box empty — after checking, compare with the sample and mark it yourself.')}</p>
+      {tip && <p className="small muted mt-note">{t('Печатай по-китайски (клавиатура iPhone: Настройки → Основные → Клавиатура → Клавиатуры → Новые → Китайский упрощ. → Пиньинь) или пиши на бумаге и оставь поле пустым — после проверки сравни с образцом и отметь сам.', 'Type in Chinese (iPhone: Settings → General → Keyboard → Keyboards → Add → Chinese Simplified → Pinyin) or write on paper and leave the box empty — after checking, compare with the sample and mark it yourself.')}</p>}
       <ol className="paper-rows paper-dialogs">
-        {PAPER_DIALOGUES.map((d, i) => (
+        {data.map((d, i) => (
           <li key={i}>
             {d.map((l, j) => {
               const id = `${i}-${j}`;
@@ -304,18 +304,18 @@ function Dialogues({ onDone }: { onDone: Done }) {
 
 /* ---------- 六 measure words ---------- */
 
-function Measure({ onDone }: { onDone: Done }) {
-  const [vals, setVals] = useState(() => PAPER_MEASURE.map(() => ''));
+export function Measure({ onDone, items = PAPER_MEASURE }: { onDone: Done; items?: typeof PAPER_MEASURE }) {
+  const [vals, setVals] = useState(() => items.map(() => ''));
   const [checked, setChecked] = useState(false);
   const [gloss, setGloss] = useState(false);
-  const score = { got: PAPER_MEASURE.filter((m, k) => m.ok.includes(vals[k])).length, max: PAPER_MEASURE.length, misses: PAPER_MEASURE.filter((m, k) => !m.ok.includes(vals[k])).map((m) => `${m.n}${m.ok[0]}${m.noun}`) };
+  const score = { got: items.filter((m, k) => m.ok.includes(vals[k])).length, max: items.length, misses: items.filter((m, k) => !m.ok.includes(vals[k])).map((m) => `${m.n}${m.ok[0]}${m.noun}`) };
   return (
     <>
       <div className="paper-bank zh">{PAPER_MEASURE_BANK.join('、')}</div>
       <button className="chip" onClick={() => setGloss(!gloss)}>{gloss ? t('Скрыть значения', 'Hide meanings') : t('Подсказка: что значит каждое', 'Hint: what each one means')}</button>
       {gloss && <ul className="paper-gloss small">{PAPER_MEASURE_BANK.map((m) => <li key={m}><span className="zh">{m}</span> {MEASURE_GLOSS[m][0]} — {t(MEASURE_GLOSS[m][1], MEASURE_GLOSS[m][2])}</li>)}</ul>}
       <div className="paper-measure">
-        {PAPER_MEASURE.map((m, k) => {
+        {items.map((m, k) => {
           const ok = m.ok.includes(vals[k]);
           return (
             <div key={k} className={`paper-mw ${checked ? (ok ? 'ok' : 'bad') : ''}`}>

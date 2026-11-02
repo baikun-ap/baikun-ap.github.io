@@ -693,3 +693,15 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 .paper-measure { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 12px 0; }
 .paper-mw { padding: 10px 12px; border-radius: 14px; border: 1px solid var(--rule-soft, #ececf0); background: var(--card, #fff); font-size: 20px; }
 .paper-gloss { columns: 2; margin: 8px 0; padding-left: 18px; }
+
+/* ---------- 18 words for the exam ---------- */
+.ex-types { display: grid; gap: 10px; margin: 16px 0; }
+.ex-type { display: flex; gap: 14px; align-items: center; color: inherit; text-decoration: none; }
+.ex-type p { margin: 2px 0 0; }
+.ex-words { display: grid; gap: 10px; margin: 12px 0; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.ex-word summary { display: flex; align-items: center; gap: 14px; cursor: pointer; list-style: none; }
+.ex-word summary::-webkit-details-marker { display: none; }
+.ex-zh { font-size: 30px; line-height: 1.1; flex: none; }
+.ex-mid { display: grid; flex: 1; }
+.ex-word .examples { margin-top: 10px; }
+.mt > .back + .eyebrow { display: block; margin-top: 12px; }
