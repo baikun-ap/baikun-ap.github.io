@@ -1,16 +1,16 @@
 {
   "builtFrom": "Noto Sans SC (OFL-1.1)",
-  "glyphs": 1338,
+  "glyphs": 1371,
   "files": [
     {
       "name": "zh-400",
       "wght": 400,
-      "bytes": 176404
+      "bytes": 181644
     },
     {
       "name": "zh-600",
       "wght": 600,
-      "bytes": 178864
+      "bytes": 184380
     }
   ]
 }

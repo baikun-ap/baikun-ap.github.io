@@ -81,12 +81,15 @@ export const TALKS: Talk[] = [
   d(8, 35, '8', '女：你喜欢中国面条儿吗？|男：不太喜欢，我喜欢日本面条儿。', '下面哪句话是对的？', 'Что верно? — Ему нравится японская лапша.', 'Which is right? — He likes Japanese noodles.', 'B', ['他不喜欢中国面条儿', '他喜欢日本面条儿', '今天不吃面条儿', '今天吃日本面条儿']),
   d(8, 35, '9', '男：我们什么时候去？|女：明天中午去吧。', '他们什么时候去？', 'Когда они пойдут? — Завтра в обед.', 'When are they going? — Tomorrow at noon.', 'D', ['今天下午', '明天下午', '今天中午', '明天中午']),
   d(8, 35, '10', '男：你在这个学校学习吗？|女：不，我在北京语言大学学习。|男：你也在这个食堂吃饭吗？|女：对，我们都在这儿吃饭。', '下面哪句话是对的？', 'Что верно? — Они оба едят в этой столовой.', 'Which is right? — They both eat in this canteen.', 'D', ['他们在一个学校学习', '女的在这个学校学习', '女的不喜欢这个食堂', '他们在这个食堂吃饭']),
-  // Lesson 8 homework · p. 36 (8-9)
-  d(8, 36, '课外 1', '女：你吃什么？|男：我吃两个包子。', '男的吃什么？', 'Что ест мужчина? — Два баоцзы.', 'What does the man eat? — Two baozi.', 'C', ['一个面包', '两个馒头', '两个包子', '一个包子']),
-  d(8, 36, '课外 2', '男：你喜欢喝啤酒吗？|女：喜欢。你呢？|男：我也很喜欢。', '下面哪句话是对的？', 'Что верно? — Оба любят пиво.', 'Which is right? — They both like beer.', 'A', ['他们都喜欢喝啤酒', '德国人都喜欢喝啤酒', '两国男人都喜欢喝啤酒', '女的不喝啤酒']),
-  d(8, 36, '课外 3（1）', '男：你吃米饭还是面条儿？|女：我吃面条儿，我不喜欢米饭。你呢？|男：我吃米饭，我很喜欢米饭。', '女的吃什么？', 'Что ест женщина? — Лапшу.', 'What does the woman eat? — Noodles.', 'B', ['女的吃米饭', '女的吃面条儿', '都吃饺子', '米饭和面条儿']),
-  d(8, 36, '课外 3（2）', '男：你吃米饭还是面条儿？|女：我吃面条儿，我不喜欢米饭。你呢？|男：我吃米饭，我很喜欢米饭。', '谁喜欢米饭？', 'Кто любит рис? — Мужчина.', 'Who likes rice? — The man.', 'A', ['男的', '女的', '他们都喜欢', '他们都不喜欢']),
-  d(8, 36, '课外 4', '女：喝咖啡吗？|男：现在不喝，我下午喝。', '下面哪句话是对的？', 'Что верно? — Он выпьет кофе после обеда.', 'Which is right? — He will have coffee in the afternoon.', 'C', ['他现在想喝茶', '他中午喝咖啡', '他下午喝咖啡', '他不喜欢喝咖啡']),
+  // Lesson 8 homework · p. 36 (8-9): the recording's text and answers from the teacher's slides
+  d(8, 36, '课外 1', '男：小姐，有馒头吗？|女：对不起，没有馒头。|男：这不是馒头吗？|女：不是，这是包子。|男：对不起，我不知道。我要两个。', '男的要买什么？', 'Что покупает мужчина? — Два баоцзы (он принял их за маньтоу).', 'What does the man buy? — Two baozi (he took them for mantou).', 'C', ['一个面包', '两个馒头', '两个包子', '一个包子']),
+  d(8, 36, '课外 2', '女：德国人很喜欢喝啤酒，对吗？|男：对，我们德国男人都喜欢喝。中国人呢？|女：中国男人也喜欢喝。|男：你喝吗？|女：我也喝。', '下面哪个选项不对？', 'Что НЕ верно? — «Женщина не пьёт пиво»: она тоже пьёт.', 'Which is NOT right? — “The woman doesn’t drink beer”: she does.', 'D', ['他们都喜欢喝啤酒', '德国人都喜欢喝啤酒', '两国男人都喜欢喝啤酒', '女的不喝啤酒']),
+  d(8, 36, '课外 3（1）', '女：麦克，今天你吃什么？|男：米饭、面条儿都可以，你呢？|女：米饭、面条儿我都不喜欢，我们吃饺子吧。|男：好吧，我也很喜欢吃饺子。', '他们吃什么？', 'Что они едят? — Пельмени.', 'What do they eat? — Dumplings.', 'C', ['女的吃米饭', '女的吃面条儿', '都吃饺子', '米饭和面条儿']),
+  d(8, 36, '课外 3（2）', '女：麦克，今天你吃什么？|男：米饭、面条儿都可以，你呢？|女：米饭、面条儿我都不喜欢，我们吃饺子吧。|男：好吧，我也很喜欢吃饺子。', '谁喜欢吃饺子？', 'Кто любит пельмени? — Оба.', 'Who likes dumplings? — Both.', 'C', ['男的', '女的', '他们都喜欢', '他们都不喜欢']),
+  d(8, 36, '课外 4', '女：你不要咖啡吗？|男：我中午不喝咖啡。有茶吗？|女：有。', '男的是什么意思？', 'Что имеет в виду мужчина? — Он хочет чай.', 'What does the man mean? — He wants tea.', 'A', ['他现在想喝茶', '他中午喝咖啡', '他下午喝咖啡', '他不喜欢喝咖啡']),
+  // 听一听，猜一猜 · p. 36 (8-10): the book prints no options; these four are the site's
+  d(8, 36, '猜一猜 1', '男：德国的啤酒好，法国的葡萄酒好。中国呢？当然是白酒。', '中国的什么酒好？', 'Какой алкоголь хорош в Китае? — Байцзю (白酒).', 'Which drink is good in China? — Baijiu (白酒).', 'C', ['啤酒', '葡萄酒', '白酒', '可乐']),
+  d(8, 36, '猜一猜 2', '男：麦克喝一瓶啤酒，山田喝一杯葡萄酒，玛丽不喝啤酒，也不喝葡萄酒，她喝可乐。', '谁不喝啤酒？', 'Кто не пьёт пиво? — Ямада и Мэри.', 'Who doesn’t drink beer? — Yamada and Mary.', 'D', ['麦克', '山田', '玛丽', '山田和玛丽']),
 ];
 
 /** 边听边写出词语的拼音和汉字: hear a word, write its pinyin, then its characters. */
@@ -94,40 +97,34 @@ export interface Dictation { lesson: number; page: number; zh: string; py: strin
 const w = (lesson: number, page: number, zh: string, py: string, ru: string, en: string): Dictation => ({ lesson, page, zh, py, ru, en });
 
 export const DICTATION: Dictation[] = [
-  // Lesson 6 · words of pp. 23–26
-  w(6, 24, '有', 'yǒu', 'иметь, есть', 'to have'),
-  w(6, 24, '老师', 'lǎoshī', 'учитель', 'teacher'),
-  w(6, 24, '法国人', 'Fǎguó rén', 'француз', 'French (person)'),
-  w(6, 24, '英国人', 'Yīngguó rén', 'британец', 'British (person)'),
-  w(6, 23, '专业', 'zhuānyè', 'специальность', 'major (subject)'),
-  w(6, 23, '西班牙语', 'Xībānyáyǔ', 'испанский язык', 'Spanish'),
-  w(6, 23, '哥哥', 'gēge', 'старший брат', 'older brother'),
-  w(6, 23, '容易', 'róngyì', 'лёгкий, простой', 'easy'),
-  w(6, 23, '美国人', 'Měiguó rén', 'американец', 'American (person)'),
-  w(6, 23, '留学生', 'liúxuéshēng', 'иностранный студент', 'international student'),
-  w(6, 23, '名字', 'míngzi', 'имя', 'name'),
-  w(6, 26, '德语', 'Déyǔ', 'немецкий язык', 'German'),
-  w(6, 26, '邮局', 'yóujú', 'почта', 'post office'),
-  w(6, 26, '寄信', 'jì xìn', 'отправить письмо', 'to send a letter'),
-  // Lesson 7 · words of pp. 28–31
-  w(7, 28, '牛奶', 'niúnǎi', 'молоко', 'milk'),
-  w(7, 28, '面包', 'miànbāo', 'хлеб', 'bread'),
-  w(7, 28, '喜欢', 'xǐhuan', 'нравиться, любить', 'to like'),
-  w(7, 28, '馒头', 'mántou', 'маньтоу', 'mantou (steamed bun)'),
-  w(7, 28, '好喝', 'hǎohē', 'вкусный (о напитке)', 'tasty (of a drink)'),
-  w(7, 28, '这本书', 'zhè běn shū', 'эта книга', 'this book'),
-  w(7, 28, '德国人', 'Déguó rén', 'немец', 'German (person)'),
-  w(7, 28, '啤酒', 'píjiǔ', 'пиво', 'beer'),
-  w(7, 28, '鸡蛋汤', 'jīdàntāng', 'суп с яйцом', 'egg soup'),
-  w(7, 28, '包子', 'bāozi', 'баоцзы', 'baozi'),
-  w(7, 28, '没有', 'méiyǒu', 'не иметь, нет', 'not to have'),
-  w(7, 28, '都', 'dōu', 'все, оба', 'all, both'),
-  w(7, 29, '银行', 'yínháng', 'банк', 'bank'),
-  w(7, 29, '星期二', 'xīngqī’èr', 'вторник', 'Tuesday'),
-  w(7, 29, '学校', 'xuéxiào', 'школа', 'school'),
-  w(7, 30, '天安门', 'Tiān’ān Mén', 'Тяньаньмэнь', 'Tian’anmen'),
-  w(7, 30, '汉字', 'Hànzì', 'иероглифы', 'Chinese characters'),
-  w(7, 30, '发音', 'fāyīn', 'произношение', 'pronunciation'),
+  // Lesson 6 · p. 26 (6-8), the words on the teacher's homework slides
+  w(6, 26, '五', 'wǔ', 'пять', 'five'),
+  w(6, 26, '一', 'yī', 'один', 'one'),
+  w(6, 26, '大', 'dà', 'большой', 'big'),
+  w(6, 26, '口', 'kǒu', 'рот; счётное для членов семьи', 'mouth; measure word for family members'),
+  w(6, 26, '三', 'sān', 'три', 'three'),
+  w(6, 26, '百', 'bǎi', 'сто', 'hundred'),
+  w(6, 26, '四口', 'sì kǒu', 'четыре человека (в семье)', 'four (people in a family)'),
+  w(6, 26, '白马', 'bái mǎ', 'белая лошадь', 'white horse'),
+  w(6, 26, '大马', 'dà mǎ', 'большая лошадь', 'big horse'),
+  w(6, 26, '女人', 'nǚrén', 'женщина', 'woman'),
+  w(6, 26, '很难', 'hěn nán', 'очень трудно', 'very hard'),
+  w(6, 26, '不忙', 'bù máng', 'не занят', 'not busy'),
+  // Lesson 7 · p. 31 (7-8), the words on the teacher's homework slides
+  w(7, 31, '哪儿', 'nǎr', 'где, куда', 'where'),
+  w(7, 31, '那儿', 'nàr', 'там', 'there'),
+  w(7, 31, '去', 'qù', 'идти, ехать', 'to go'),
+  w(7, 31, '寄', 'jì', 'отправлять (по почте)', 'to send by post'),
+  w(7, 31, '取', 'qǔ', 'брать, получать', 'to take, to get'),
+  w(7, 31, '前', 'qián', 'перед, впереди', 'front, before'),
+  w(7, 31, '见', 'jiàn', 'видеть, встречать', 'to see, to meet'),
+  w(7, 31, '北京', 'Běijīng', 'Пекин', 'Beijing'),
+  w(7, 31, '银行', 'yínháng', 'банк', 'bank'),
+  w(7, 31, '邮局', 'yóujú', 'почта', 'post office'),
+  w(7, 31, '学校', 'xuéxiào', 'школа', 'school'),
+  w(7, 31, '星期', 'xīngqī', 'неделя', 'week'),
+  w(7, 31, '再见', 'zàijiàn', 'до свидания', 'goodbye'),
+  w(7, 31, '今天', 'jīntiān', 'сегодня', 'today'),
   // Lesson 8 · words of pp. 33–36
   w(8, 33, '茶', 'chá', 'чай', 'tea'),
   w(8, 33, '邮票', 'yóupiào', 'почтовая марка', 'stamp'),
@@ -149,8 +146,8 @@ export interface FillText { page: number; lines: { who?: string; parts: (string 
 const g = (zh: string, py: string): Gap => ({ zh, py });
 
 export const FILL_TEXTS: FillText[] = [
-  { page: 26, ru: 'У меня есть старший брат, его зовут Сяомин, он очень занят. Он учит немецкий, немецкий очень трудный.', en: 'I have an older brother called Xiaoming; he is very busy. He studies German, and German is very hard.',
-    lines: [{ parts: ['我有一个', g('哥哥', 'gēge'), '，他叫小明，他很', g('忙', 'máng'), '。他学德语，德语很', g('难', 'nán'), '。'] }] },
+  { page: 26, ru: 'У меня есть младший брат, его зовут Сяомин, он очень занят. Он учит немецкий, немецкий очень трудный.', en: 'I have a younger brother called Xiaoming; he is very busy. He studies German, and German is very hard.',
+    lines: [{ parts: ['我有一个', g('弟弟', 'dìdi'), '，他叫小明，他很', g('忙', 'máng'), '。他学德语，德语很', g('难', 'nán'), '。'] }] },
   { page: 26, ru: 'А: Ты идёшь на почту? — Б: Да. А ты? — А: Я тоже, отправить письмо. Ты тоже отправляешь письмо? — Б: Нет, я иду снять деньги.', en: 'A: Are you going to the post office? — B: Yes. And you? — A: Me too, to send a letter. Are you sending one too? — B: No, I am going to get money.',
     lines: [
       { who: 'A', parts: ['你去', g('邮局', 'yóujú'), '吗？'] },
@@ -158,4 +155,65 @@ export const FILL_TEXTS: FillText[] = [
       { who: 'A', parts: ['我', g('也', 'yě'), '去，我去寄信。你也寄信吗？'] },
       { who: 'B', parts: ['不，我去取', g('钱', 'qián'), '。'] },
     ] },
+];
+
+/**
+ * 听后标出声调 — lessons 1–3 homework, the syllables and words on the
+ * teacher's slides. `say` is what the voice reads: single syllables are read
+ * through a character with that one reading.
+ */
+export interface ToneItem { lesson: number; py: string; say: string; zh?: string }
+const tn = (lesson: number, list: string, word = false): ToneItem[] => list.split(' / ').map((x) => {
+  const [py, say] = x.split('=');
+  return { lesson, py, say, zh: word ? say : undefined };
+});
+export const TONES: ToneItem[] = [
+  ...tn(1, 'pà=怕 / mài=卖 / bāo=包 / hǎi=海 / hē=喝 / fǎ=法 / nǚ=女 / tè=特 / fēi=飞 / dōu=兜 / lèi=类 / kǎo=考 / gū=姑 / yì=意 / yú=鱼 / hòu=后'),
+  ...tn(1, 'dàgài=大概 / máoyī=毛衣 / fúwù=服务 / tǐyù=体育 / tígāo=提高 / nǔlì=努力 / lí kāi=离开 / hēibái=黑白 / mǎlù=马路 / báimǐ=白米 / àihào=爱好', true),
+  ...tn(2, 'bān=班 / páng=旁 / hěn=很 / hóng=红 / kàn=看 / gèng=更 / fēn=分 / lán=蓝 / dòng=动 / máng=忙 / tōng=通 / néng=能 / běn=本 / kōng=空 / gàn=赣'),
+  ...tn(2, 'bù tóng=不同 / fāngfǎ=方法 / hǎokàn=好看 / fēngfù=丰富 / hēibǎn=黑板 / gāngbǐ=钢笔 / kèběn=课本 / gǎnmào=感冒 / gōngyù=公寓 / tàiyáng=太阳 / láodòng=劳动 / kěnéng=可能 / Hànyǔ=汉语 / bàn gōng=办公 / hóngdēng=红灯 / bāng máng=帮忙 / nánfāng=南方', true),
+  ...tn(3, 'xìn=信 / quán=全 / qún=群 / bié=别 / jiào=叫 / tīng=听 / jué=决 / xuǎn=选 / xiǎng=想'),
+  ...tn(3, 'jiàn miàn=见面 / juédìng=决定 / xuéjí=学籍 / qǐng jià=请假 / xiāngxìn=相信 / xiūxi=休息', true),
+];
+
+/**
+ * 在横线上填出你听到的音节 — lessons 1–5 homework sentences from the
+ * teacher's slides. In `py`, the syllables in [brackets] are the gaps, as on
+ * the midterm paper ("hěn hǎo[kàn]").
+ */
+export interface BlankLine { who?: 'A' | 'B'; py: string; zh: string }
+export interface BlankItem { lesson: number; lines: BlankLine[]; ru: string; en: string }
+const bl = (lesson: number, ru: string, en: string, ...lines: (string | [string, string, string])[]): BlankItem => ({
+  lesson, ru, en,
+  lines: lines.map((l) => (typeof l === 'string' ? (() => { const [py, zh] = l.split(' = '); return { py, zh }; })() : { who: l[0] as 'A' | 'B', py: l[1], zh: l[2] })),
+});
+
+export const BLANKS: BlankItem[] = [
+  bl(1, 'Майк старше него.', 'Mike is older than him.', 'Màikè bǐ tā [dà]. = 麦克比他大。'),
+  bl(1, 'Его одежда такая белая.', 'His clothes are so white.', 'Tā de yīfu kě [bái] le. = 他的衣服可白了。'),
+  bl(1, 'Мама пьёт кофе, старший брат — колу.', 'Mum drinks coffee, my older brother drinks cola.', 'Māma hē kā[fēi], gēge hē kě[lè]. = 妈妈喝咖啡，哥哥喝可乐。'),
+  bl(1, 'Она любит вязать свитера, Майк любит бегать.', 'She likes knitting sweaters, Mike likes running.', 'Tā ài dǎ máo[yī], Màikè ài pǎo [bù]. = 她爱打毛衣，麦克爱跑步。'),
+  bl(1, 'Ты покупаешь груши, он рыбу, Мэри рис.', 'You buy pears, he buys fish, Mary buys rice.', 'Nǐ mǎi [lí], tā mǎi [yú], Mǎlì mǎi dà[mǐ]. = 你买梨，他买鱼，玛丽买大米。'),
+  bl(1, 'Старший брат выше младшего, младший ниже старшего.', 'The older brother is taller than the younger, the younger is shorter.', 'Gēge bǐ dìdi [gāo], dìdi bǐ gēge [ǎi]. = 哥哥比弟弟高，弟弟比哥哥矮。'),
+  bl(2, 'Его одежда очень красивая.', 'His clothes look very nice.', 'Tā de yīfu hěn hǎo[kàn]. = 他的衣服很好看。'),
+  bl(2, 'Китайский трудный? — Нет.', 'Is Chinese hard? — No.', ['A', 'Hànyǔ [nán] ma?', '汉语难吗？'], ['B', '[Bù nán].', '不难。']),
+  bl(2, 'В кофе сахар кладёшь? — Нет.', 'Do you put sugar in coffee? — No.', ['A', 'Kāfēi li fàng [táng] ma?', '咖啡里放糖吗？'], ['B', 'Bú [fàng].', '不放。']),
+  bl(2, 'Перевод готов? — Ещё нет.', 'Is the translation done? — Not yet.', ['A', '[Fānyì] hǎo le ma?', '翻译好了吗？'], ['B', 'Hái [méi] ne.', '还没呢。']),
+  bl(2, 'Доктор, мне холодно и болит голова. — Наверное, простуда.', 'Doctor, I’m cold and have a headache. — Probably a cold.', ['A', 'Dàifu, wǒ hěn [lěng], hái tóu [téng].', '大夫，我很冷，还头疼。'], ['B', 'Kěnéng [gǎnmào] le.', '可能感冒了。']),
+  bl(2, 'Посмотрите на доску… Понятно? — Понятно.', 'Look at the blackboard… Got it? — Got it.', ['A', 'Nǐmen kàn [hēibǎn]… Dǒng le ma?', '你们看黑板……懂了吗？'], ['B', '[Dǒng] le.', '懂了。']),
+  bl(3, 'Сегодня суббота, он хочет пойти поплавать.', 'Today is Saturday; he wants to go swimming.', 'Jīntiān Xīngqī[liù], tā xiǎng qù [yóu] yǒng. = 今天星期六，他想去游泳。'),
+  bl(3, 'Мэри любит слушать музыку, Майк любит баскетбол.', 'Mary likes listening to music, Mike likes basketball.', 'Mǎlì ài tīng [yīnyuè], Màikè ài dǎ [lán]qiú. = 玛丽爱听音乐，麦克爱打篮球。'),
+  bl(3, 'Старшая сестра идёт на почту купить марки.', 'My older sister goes to the post office to buy stamps.', 'Jiějie qù [yóujú] mǎi [yóupiào]. = 姐姐去邮局买邮票。'),
+  bl(3, 'Сегодня в школе концерт на китайском, пойдёшь смотреть?', 'There is a Chinese show at school today — going to watch?', 'Jīntiān xuéxiào yǒu Hànyǔ [jiémù] biǎoyǎn, qù [kàn] ma? = 今天学校有汉语节目表演，去看吗？'),
+  bl(3, 'Ребята, тише, пожалуйста.', 'Classmates, quiet, please.', 'Tóngxuémen, qǐng [ānjìng]. = 同学们，请安静。'),
+  bl(3, 'Сегодня он идёт в банк снять деньги, завтра — в больницу к врачу.', 'Today he goes to the bank for money, tomorrow to the hospital.', 'Tā jīntiān qù [yínháng] qǔ qián, míngtiān qù [yīyuàn] kàn bìng. = 他今天去银行取钱，明天去医院看病。'),
+  bl(4, 'Я люблю танцевать, он любит теннис.', 'I like dancing, he likes tennis.', 'Wǒ xǐhuan tiào [wǔ], tā xǐhuan dǎ [wǎng]qiú. = 我喜欢跳舞，他喜欢打网球。'),
+  bl(4, 'Скажите, где туалет? — Впереди.', 'Excuse me, where is the toilet? — Up ahead.', ['A', 'Qǐng wèn, nǎr yǒu [cèsuǒ]?', '请问，哪儿有厕所？'], ['B', '[Qián] biānr yǒu.', '前边儿有。']),
+  bl(4, 'Есть трудности в учёбе? — Мне кажется, произношение очень трудное.', 'Any difficulties in your studies? — I find pronunciation hard.', ['A', 'Nǐ xuéxí yǒu [kùnnan] ma?', '你学习有困难吗？'], ['B', 'Wǒ juéde Hànyǔ [fāyīn] hěn nán.', '我觉得汉语发音很难。']),
+  bl(4, 'Какая завтра погода? — Тепло. — Ветер будет? — Нет.', 'What’s the weather tomorrow? — Warm. — Windy? — No.', ['A', 'Míngtiān [tiānqì] zěnmeyàng?', '明天天气怎么样？'], ['B', 'Hěn [nuǎnhuo].', '很暖和。'], ['A', 'Guā [fēng] ma?', '刮风吗？'], ['B', 'Bù guā fēng.', '不刮风。']),
+  bl(4, 'Ваша фамилия? — Хуан. — Добро пожаловать! — Спасибо!', 'Your surname? — Huang. — Welcome! — Thank you!', ['A', 'Nín guìxìng?', '您贵姓？'], ['B', 'Wǒ xìng [Huáng].', '我姓黄。'], ['A', '[Huānyíng] nín!', '欢迎您！'], ['B', 'Xièxie!', '谢谢！']),
+  bl(5, 'Это мой муж, он профессор. Это мой сын, он студент.', 'This is my husband, he is a professor. This is my son, he is a student.', 'Zhè shì wǒ ài[ren], tā shì jiào[shòu]. Zhè shì wǒ [ér]zi, tā shì xué[sheng]. = 这是我爱人，他是教授。这是我儿子，他是学生。'),
+  bl(5, 'Это аудитория, здесь у нас занятия. Это столовая, здесь мы едим. Это общежитие, здесь мы отдыхаем.', 'This is the classroom, we have classes here. This is the canteen, we eat here. This is the dorm, we rest here.', 'Zhè shì [jiàoshì], wǒmen zài zhèr shàng kè. Zhè shì [shítáng], wǒmen zài zhèr chī fàn. Zhè shì [sùshè], wǒmen zài zhèr xiūxi. = 这是教室，我们在这儿上课。这是食堂，我们在这儿吃饭。这是宿舍，我们在这儿休息。'),
+  bl(5, 'Что это за машина? — Такси. — А та как называется? — Автобус.', 'What car is this? — A taxi. — And that one? — A bus.', ['A', 'Zhè shì shénme chē?', '这是什么车？'], ['B', 'Zhè shì [chūzū] qìchē.', '这是出租汽车。'], ['A', 'Nà jiào shénme chē?', '那叫什么车？'], ['B', 'Nà jiào [gōnggòng] qìchē.', '那叫公共汽车。']),
+  bl(5, 'Сколько стоит эта рубашка? — Девяносто юаней.', 'How much is this shirt? — Ninety yuan.', ['A', 'Zhè jiàn [chènyī] duōshao qián?', '这件衬衣多少钱？'], ['B', '[Jiǔshí] kuài qián.', '九十块钱。']),
 ];

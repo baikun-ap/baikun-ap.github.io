@@ -720,3 +720,11 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 .ls-gap .search { width: 104px; margin: 0; padding: 4px 8px; text-align: center; font-size: 17px; }
 .ls-gap .search.ok { border-color: var(--good); background: var(--good-wash); }
 .ls-gap .search.bad { border-color: var(--bad); background: var(--bad-wash); }
+.ls-tones { display: grid; gap: 8px; margin: 12px 0; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.ls-tone { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 8px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--rule-soft, #ececf0); background: var(--card, #fff); }
+.ls-tone .search { grid-column: 1 / -1; margin: 0; text-align: center; }
+.ls-tone.ok { border-color: var(--good); background: var(--good-wash); }
+.ls-tone.bad { border-color: var(--bad); background: var(--bad-wash); }
+.ls-bare { font-size: 18px; color: var(--ink-muted, #86868b); }
+.ls-py { font-size: 18px; line-height: 2.3; margin: 4px 0; }
+.ls-mini { margin-bottom: 4px; }

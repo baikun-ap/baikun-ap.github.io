@@ -43,8 +43,8 @@ await go('midterm');
 check((await page.locator('a[href="#/midterm/listen"]').count()) === 1, 'the midterm page links to the listening midterm');
 await go('midterm/listen');
 await page.screenshot({ path: `${OUT}/hub.png`, fullPage: true });
-check((await page.locator('.paper-sec').count()) === 4, 'four listening parts');
-check(await page.locator('text=· 30').isVisible() && await page.locator('text=· 28').isVisible() && await page.locator('text=· 44').isVisible(), 'counts: 30 replies, 28 dialogues, 44 dictation words');
+check((await page.locator('.paper-sec').count()) === 6, 'six listening parts');
+check((await page.locator('text=/· 30$/').count()) === 2 && await page.locator('text=/· 38$/').isVisible() && await page.locator('text=/· 27$/').isVisible(), 'counts: 30 replies, 30 dialogues, 38 dictation words, 27 sentences');
 
 // 一 choose the reply: the play button reads the question aloud.
 await go('midterm/listen/reply');
@@ -79,7 +79,7 @@ await page.screenshot({ path: `${OUT}/talk.png`, fullPage: true });
 n = 1;
 await page.click('.quiz-foot .btn.primary');
 while (!(await resultShown()) && n++ < 40) { await page.locator('.ls-opts .opt').first().click(); await page.click('.quiz-foot .btn.primary'); }
-check(n === 28, `dialogues ran all 28 (${n})`);
+check(n === 30, `dialogues ran all 30 (${n})`);
 
 // 三 dictation: a play button and no text to read, pinyin first, then characters.
 await go('midterm/listen/write');
@@ -98,12 +98,37 @@ check(await page.locator('.quiz-top').innerText().then((s) => s.startsWith('2 /'
 await go('midterm/listen/fill');
 const ins = await page.locator('.ls-gap input').all();
 check(ins.length === 6, `six gaps on p. 26 (${ins.length})`);
-const ANS = ['哥哥', 'mang2', '难', 'you2ju2', '也', 'qian2'];
+const ANS = ['弟弟', 'mang2', '难', 'you2ju2', '也', 'qian2'];
 for (let k = 0; k < ins.length; k++) await ins[k].pressSequentially(ANS[k]);
 check((await ins[1].inputValue()) === 'máng', 'tone numbers become marks in the gaps');
 await page.click('.quiz-foot .btn.primary');
 check(await page.locator('text=Верно 6 из 6').isVisible(), 'gap text: characters and pinyin both accepted, 6 of 6');
 await page.screenshot({ path: `${OUT}/fill.png`, fullPage: true });
+
+// 一 tones (lesson 1 of the teacher's slides): every syllable read aloud, tones typed as numbers.
+await go('midterm/listen/tones');
+const T1 = ['pa4', 'mai4', 'bao1', 'hai3', 'he1', 'fa3', 'nü3', 'te4', 'fei1', 'dou1', 'lei4', 'kao3', 'gu1', 'yi4', 'yu2', 'hou4', 'da4gai4', 'mao2yi1', 'fu2wu4', 'ti3yu4', 'ti2gao1', 'nu3li4', 'li2 kai1', 'hei1bai2', 'ma3lu4', 'bai2mi3', 'ai4hao4'];
+const tin = await page.locator('.ls-tone input').all();
+check(tin.length === 27, `lesson 1 has 27 tone items (${tin.length})`);
+await page.evaluate(() => { window.__spoken.length = 0; });
+await page.locator('.ls-tone .chip').first().click();
+await page.waitForTimeout(150);
+check((await spoken())[0] === '怕', 'the ▶ button reads pà as 怕');
+for (let k = 0; k < tin.length; k++) await tin[k].pressSequentially(T1[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator('text=Верно 27 из 27').isVisible(), 'tones lesson 1: 27 of 27');
+await page.screenshot({ path: `${OUT}/tones.png`, fullPage: true });
+
+// 二 missing syllables (lesson 2 sentences, as on the midterm paper).
+await go('midterm/listen/blanks');
+await page.click('.nt-lessons .chip:text-is("Урок 2")');
+const B2 = ['kan4', 'nan2', 'Bu4 nan2', 'tang2', 'fang4', 'Fan1yi4', 'mei2', 'leng3', 'teng2', 'gan3mao4', 'hei1ban3', 'Dong3'];
+const bin = await page.locator('.ls-gap input').all();
+check(bin.length === B2.length, `lesson 2 has ${B2.length} gaps (${bin.length})`);
+for (let k = 0; k < bin.length; k++) await bin[k].pressSequentially(B2[k]);
+await page.click('.quiz-foot .btn.primary');
+check(await page.locator(`text=Верно ${B2.length} из ${B2.length}`).isVisible(), 'missing syllables lesson 2: all right');
+await page.screenshot({ path: `${OUT}/blanks.png`, fullPage: true });
 
 // Lesson filter.
 await go('midterm/listen');

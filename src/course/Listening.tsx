@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DICTATION, FILL_TEXTS, REPLIES, TALKS, type FillText, type Gap, type Reply, type Talk } from '../content/listening-midterm';
+import { BLANKS, DICTATION, FILL_TEXTS, REPLIES, TALKS, TONES, type BlankItem, type FillText, type Gap, type Reply, type Talk, type ToneItem } from '../content/listening-midterm';
 import { autoMark, checkPinyin, shuffle } from './exercises';
 import { Py, VoiceWarning, useCourseCtx } from './ui';
 import { useVoiceStatus } from '../components/Speaker';
@@ -19,10 +19,12 @@ const LS_SEL = 'baikun-listen-lessons';
 const PITCH = { 男: 0.75, 女: 1.3 } as const;
 
 const PARTS = [
-  { key: 'reply', zh: '一、听后选择合适的回答', ru: 'Послушай вопрос и выбери подходящий ответ', en: 'Listen and choose the appropriate answer' },
-  { key: 'talk', zh: '二、听下列对话，选择正确答案', ru: 'Послушай диалог и выбери правильный ответ', en: 'Listen to the conversation and choose the right answer' },
-  { key: 'write', zh: '三、边听边写出词语的拼音和汉字', ru: 'Послушай слово → напиши пиньинь → потом иероглифы', en: 'Listen, write the pinyin, then the characters' },
-  { key: 'fill', zh: '四、边听边填空', ru: 'Послушай текст и заполни пропуски (стр. 26)', en: 'Listen and fill in the blanks (p. 26)' },
+  { key: 'tones', zh: '一、听后标出声调', ru: 'Послушай и напиши пиньинь с тоном (уроки 1–3, слайды преподавателя)', en: 'Listen and write the pinyin with tones (lessons 1–3, teacher’s slides)' },
+  { key: 'blanks', zh: '二、在横线上填出你听到的音节', ru: 'Послушай и впиши пропущенные слоги (уроки 1–5, как в тесте)', en: 'Listen and fill in the missing syllables (lessons 1–5, as in the test)' },
+  { key: 'reply', zh: '三、听后选择合适的回答', ru: 'Послушай вопрос и выбери подходящий ответ', en: 'Listen and choose the appropriate answer' },
+  { key: 'talk', zh: '四、听下列对话，选择正确答案', ru: 'Послушай диалог и выбери правильный ответ', en: 'Listen to the conversation and choose the right answer' },
+  { key: 'write', zh: '五、边听边写出词语的拼音和汉字', ru: 'Послушай слово → напиши пиньинь → потом иероглифы', en: 'Listen, write the pinyin, then the characters' },
+  { key: 'fill', zh: '六、边听边填空', ru: 'Послушай текст и заполни пропуски (стр. 26)', en: 'Listen and fill in the blanks (p. 26)' },
 ] as const;
 type Key = (typeof PARTS)[number]['key'];
 
@@ -68,18 +70,20 @@ export default function Listening({ sub }: { sub?: string }) {
         {part.key === 'talk' && <Runner key={`t${sel}`} {...back} make={() => shuffle(lists.talk)} run={(items, done, start, onAt) => <ChoicePart items={items} kind="talk" onFinish={done} start={start} onAt={onAt} />} />}
         {part.key === 'write' && <Runner key={`w${sel}`} {...back} make={() => shuffle(lists.write).map(toWord)} run={(items, done, start, onAt) => <WritePart items={items} byAudio onFinish={done} start={start} onAt={onAt} />} />}
         {part.key === 'fill' && <FillPart />}
+        {part.key === 'tones' && <ByLesson lessons={[1, 2, 3]} render={(l) => <TonePart key={l} items={TONES.filter((x) => x.lesson === l)} />} />}
+        {part.key === 'blanks' && <ByLesson lessons={[1, 2, 3, 4, 5]} render={(l) => <BlankPart key={l} items={BLANKS.filter((x) => x.lesson === l)} />} />}
       </div>
     );
   }
   if (sub === 'all') return <All lists={lists} />;
 
-  const count: Record<Key, number> = { reply: lists.reply.length, talk: lists.talk.length, write: lists.write.length, fill: FILL_TEXTS.length };
+  const count: Record<Key, number> = { tones: TONES.length, blanks: BLANKS.length, reply: lists.reply.length, talk: lists.talk.length, write: lists.write.length, fill: FILL_TEXTS.length };
   return (
     <div className="page mt">
       <a className="back" href="#/midterm">← {t('Мидтерм', 'Midterm')}</a>
       <span className="eyebrow">{t('听力 · АУДИРОВАНИЕ', '听力 · LISTENING')}</span>
       <h1 className="serif h1">{t('Мидтерм по аудированию', 'Listening midterm')}</h1>
-      <p className="muted lead">{t('《汉语听力教程》 том 1, уроки 6–8 (стр. 22–36). Варианты ответов — как в книге. Записей книги у сайта нет, поэтому вопросы и диалоги к ним написаны сайтом и их читает китайский голос: в диалогах мужчина говорит ниже, женщина выше.', '《汉语听力教程》 Book 1, lessons 6–8 (pp. 22–36). The answer options are the book’s. The site has no recordings from the book, so the questions and dialogues are written by the site and read by its Chinese voice: in dialogues the man speaks lower, the woman higher.')}</p>
+      <p className="muted lead">{t('《汉语听力教程》 том 1. Разделы 一, 二 и диктант уроков 6–7, диалоги урока 8 — тексты домашних записей со слайдов преподавателя. Вопросы уроков 6–8 написаны сайтом под варианты ответов книги. Всё читает китайский голос сайта: в диалогах мужчина ниже, женщина выше.', '《汉语听力教程》 Book 1. Parts 一 and 二, the lesson 6–7 dictation and the lesson 8 dialogues use the homework recordings’ texts from the teacher’s slides. The lesson 6–8 questions are written by the site for the book’s answer options. The site’s Chinese voice reads everything: in dialogues the man is lower, the woman higher.')}</p>
 
       <section className="panel mt-lessons">
         <span className="small muted">{t('Уроки', 'Lessons')}</span>
@@ -94,12 +98,12 @@ export default function Listening({ sub }: { sub?: string }) {
       <div className="paper-list">
         {PARTS.map((p, k) => (
           <a key={p.key} className="panel paper-sec" href={`#/midterm/listen/${p.key}`}>
-            <span className="paper-n zh">{['一', '二', '三', '四'][k]}</span>
+            <span className="paper-n zh">{['一', '二', '三', '四', '五', '六'][k]}</span>
             <div><h3 className="zh">{p.zh.slice(2)}</h3><p className="small muted">{t(p.ru, p.en)} · {count[p.key]}</p></div>
           </a>
         ))}
       </div>
-      <a className="btn primary lg" href="#/midterm/listen/all">{t('Всё подряд: 10 + 10 + 10 + текст', 'All in a row: 10 + 10 + 10 + text')}</a>
+      <a className="btn primary lg" href="#/midterm/listen/all">{t('Всё подряд: тоны, слоги, вопросы, диалоги, диктант, текст', 'All in a row: tones, syllables, questions, dialogues, dictation, text')}</a>
     </div>
   );
 }
@@ -216,10 +220,112 @@ function FillPart({ onDone }: { onDone?: (s: { got: number; max: number }) => vo
   );
 }
 
+/* ---------- lessons 1–5: tones and missing syllables ---------- */
+
+function ByLesson({ lessons, render }: { lessons: number[]; render: (l: number) => React.ReactNode }) {
+  const [l, setL] = useState(lessons[0]);
+  return (
+    <>
+      <div className="row nt-lessons">{lessons.map((n) => <button key={n} className={`chip ${n === l ? 'on' : ''}`} onClick={() => setL(n)}>{t(`Урок ${n}`, `Lesson ${n}`)}</button>)}</div>
+      {render(l)}
+    </>
+  );
+}
+
+const toneless = (py: string) => py.normalize('NFD').replace(/[\u0300\u0301\u0304\u030c]/g, '').normalize('NFC');
+
+function TonePart({ items, onDone }: { items: ToneItem[]; onDone?: (s: { got: number; max: number }) => void }) {
+  const voice = useVoice();
+  const { actions } = useCourseCtx();
+  const [vals, setVals] = useState(() => items.map(() => ''));
+  const [checked, setChecked] = useState(false);
+  const ok = items.map((x, k) => checkPinyin(vals[k], x.py) === 'ok');
+  const got = ok.filter(Boolean).length;
+  return (
+    <>
+      <VoiceWarning />
+      <p className="small muted mt-note">{t('Нажми ▶, послушай и напиши пиньинь с тоном: цифрой после слога (pa4 → pà) или знаком.', 'Tap ▶, listen and write the pinyin with its tone: a number after the syllable (pa4 → pà) or a mark.')}</p>
+      <div className="ls-tones">
+        {items.map((x, k) => (
+          <div key={x.py} className={`ls-tone ${checked ? (ok[k] ? 'ok' : 'bad') : ''}`}>
+            <button className="chip" onClick={() => voice.say(x.say)} aria-label={t('Послушать', 'Listen')}>▶</button>
+            <span className="ls-bare">{toneless(x.py)}</span>
+            <input className="search" value={vals[k]} disabled={checked} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={toneless(x.py)}
+              onChange={(e) => setVals(vals.map((v, m) => (m === k ? autoMark(e.target.value) : v)))} />
+            {checked && !ok[k] && <span className="small"><Py text={x.py} />{x.zh && <span className="zh"> {x.zh}</span>}</span>}
+            {checked && ok[k] && x.zh && <span className="small zh">{x.zh}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="quiz-foot">
+        {checked
+          ? <><span className={`verdict ${got === items.length ? 'ok' : 'bad'}`}>{t(`Верно ${got} из ${items.length}`, `${got} of ${items.length} correct`)}</span>
+            {onDone ? <button className="btn primary" onClick={() => onDone({ got, max: items.length })}>{t('Готово', 'Done')}</button>
+              : <button className="btn" onClick={() => { setVals(items.map(() => '')); setChecked(false); }}>{t('Ещё раз', 'Again')}</button>}</>
+          : <button className="btn primary" onClick={() => { setChecked(true); actions.answered(got === items.length); }}>{t('Проверить', 'Check')}</button>}
+      </div>
+    </>
+  );
+}
+
+/** "hěn hǎo[kàn]" → text and gaps. */
+const splitGaps = (py: string) => py.split(/(\[[^\]]+\])/).filter(Boolean).map((x) => (x.startsWith('[') ? { gap: x.slice(1, -1) } : x));
+
+function BlankPart({ items, onDone }: { items: BlankItem[]; onDone?: (s: { got: number; max: number }) => void }) {
+  const voice = useVoice();
+  const { actions } = useCourseCtx();
+  const gaps = items.map((it) => it.lines.flatMap((l) => splitGaps(l.py).filter((p): p is { gap: string } => typeof p !== 'string').map((p) => p.gap)));
+  const [vals, setVals] = useState<string[][]>(() => gaps.map((g) => g.map(() => '')));
+  const [checked, setChecked] = useState(false);
+  const okAt = (i: number, k: number) => checkPinyin(vals[i][k] ?? '', gaps[i][k]) === 'ok';
+  const got = gaps.reduce((s, g, i) => s + g.filter((_, k) => okAt(i, k)).length, 0), max = gaps.flat().length;
+  const play = (it: BlankItem) => voice.dialogue(it.lines.map((l) => ({ who: l.who === 'B' ? '女' : '男', zh: l.zh })));
+  return (
+    <>
+      <VoiceWarning />
+      <p className="small muted mt-note">{t('Нажми ▶ и впиши пропущенные слоги пиньинем с тонами (kan4 → kàn).', 'Tap ▶ and fill in the missing syllables in pinyin with tones (kan4 → kàn).')}</p>
+      <ol className="paper-rows">
+        {items.map((it, i) => {
+          let at = -1;
+          return (
+            <li key={i}>
+              <button className="chip ls-mini" onClick={() => play(it)}>▶ {t('Послушать', 'Listen')}</button>
+              {it.lines.map((l, j) => (
+                <p key={j} className="ls-py">{l.who && <b>{l.who}：</b>}
+                  {splitGaps(l.py).map((p, k) => {
+                    if (typeof p === 'string') return <span key={k}>{p}</span>;
+                    at += 1;
+                    const n = at, good = okAt(i, n);
+                    return (
+                      <span key={k} className="ls-gap">
+                        <input className={`search ${checked ? (good ? 'ok' : 'bad') : ''}`} value={vals[i][n] ?? ''} disabled={checked} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="＿＿"
+                          onChange={(e) => setVals(vals.map((row, m) => (m === i ? row.map((c, q) => (q === n ? autoMark(e.target.value) : c)) : row)))} />
+                        {checked && !good && <span className="small"><Py text={p.gap} /></span>}
+                      </span>
+                    );
+                  })}
+                </p>
+              ))}
+              {checked && <p className="small muted">{it.lines.map((l) => l.zh).join(' ')} · {t(it.ru, it.en)}</p>}
+            </li>
+          );
+        })}
+      </ol>
+      <div className="quiz-foot">
+        {checked
+          ? <><span className={`verdict ${got === max ? 'ok' : 'bad'}`}>{t(`Верно ${got} из ${max}`, `${got} of ${max} correct`)}</span>
+            {onDone ? <button className="btn primary" onClick={() => onDone({ got, max })}>{t('Готово', 'Done')}</button>
+              : <button className="btn" onClick={() => { setVals(gaps.map((g) => g.map(() => ''))); setChecked(false); }}>{t('Ещё раз', 'Again')}</button>}</>
+          : <button className="btn primary" onClick={() => { setChecked(true); actions.answered(got === max); }}>{t('Проверить', 'Check')}</button>}
+      </div>
+    </>
+  );
+}
+
 /* ---------- everything in a row ---------- */
 
 function All({ lists }: { lists: { reply: Reply[]; talk: Talk[]; write: (typeof DICTATION)[number][] } }) {
-  const [plan] = useState(() => ({ reply: shuffle(lists.reply).slice(0, 10), talk: shuffle(lists.talk).slice(0, 10), write: shuffle(lists.write).slice(0, 10).map(toWord) }));
+  const [plan] = useState(() => ({ tones: shuffle(TONES).slice(0, 12), blanks: shuffle(BLANKS).slice(0, 5), reply: shuffle(lists.reply).slice(0, 10), talk: shuffle(lists.talk).slice(0, 10), write: shuffle(lists.write).slice(0, 10).map(toWord) }));
   const [stage, setStage] = useState(0);
   const [scores, setScores] = useState<{ got: number; max: number }[]>([]);
   const done = (s: { got: number; max: number }) => { setScores([...scores, s]); setStage(stage + 1); window.scrollTo(0, 0); };
@@ -229,7 +335,7 @@ function All({ lists }: { lists: { reply: Reply[]; talk: Talk[]; write: (typeof 
       <h1 className="serif h2">{t('Всё подряд', 'All in a row')}</h1>
     </>
   );
-  if (stage >= 4) {
+  if (stage >= PARTS.length) {
     const got = scores.reduce((a, s) => a + s.got, 0), max = scores.reduce((a, s) => a + s.max, 0);
     const pct = Math.round((got / max) * 100);
     return (
@@ -245,7 +351,9 @@ function All({ lists }: { lists: { reply: Reply[]; talk: Talk[]; write: (typeof 
   const p = PARTS[stage];
   return (
     <div className="page narrow mt paper" key={stage}>{head}
-      <p className="hint">{t(`Часть ${stage + 1} из 4`, `Part ${stage + 1} of 4`)} · <span className="zh">{p.zh}</span></p>
+      <p className="hint">{t(`Часть ${stage + 1} из ${PARTS.length}`, `Part ${stage + 1} of ${PARTS.length}`)} · <span className="zh">{p.zh}</span></p>
+      {p.key === 'tones' && <TonePart items={plan.tones} onDone={done} />}
+      {p.key === 'blanks' && <BlankPart items={plan.blanks} onDone={done} />}
       {p.key === 'reply' && <ChoicePart items={plan.reply} kind="reply" onFinish={(r) => done({ got: r.right, max: r.total })} />}
       {p.key === 'talk' && <ChoicePart items={plan.talk} kind="talk" onFinish={(r) => done({ got: r.right, max: r.total })} />}
       {p.key === 'write' && <WritePart items={plan.write} byAudio onFinish={(r) => done({ got: r.right, max: r.total })} />}
