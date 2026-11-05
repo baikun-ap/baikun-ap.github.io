@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DICTATION, FILL_TEXTS, REPLIES, TALKS, type FillText, type Gap, type Reply, type Talk } from '../content/listening-midterm';
 import { autoMark, checkPinyin, shuffle } from './exercises';
-import { Py, useCourseCtx } from './ui';
+import { Py, VoiceWarning, useCourseCtx } from './ui';
+import { useVoiceStatus } from '../components/Speaker';
 import { Progress, Runner, WritePart, readLS, writeLS, useAt, type Result, type WriteWord } from './Write';
 import { speak, speakSequence, stopSpeaking } from '../lib/speech';
 import { t } from '../i18n';
@@ -25,12 +26,18 @@ const PARTS = [
 ] as const;
 type Key = (typeof PARTS)[number]['key'];
 
-/** Reads with the learner's voice and speed. */
+/**
+ * Reads with the learner's voice and speed. Subscribing to the voice status is
+ * what makes the browser load its voices; without it the list stays empty and
+ * nothing is spoken.
+ */
 function useVoice() {
   const { state } = useCourseCtx();
+  const status = useVoiceStatus();
   const base = { voiceURI: state.settings.voiceURI, rate: state.settings.rate };
   useEffect(() => () => stopSpeaking(), []);
   return {
+    status,
     say: (text: string) => speak(text, base),
     dialogue: (lines: { who: '男' | '女'; zh: string }[], q?: string) =>
       speakSequence([...lines.map((l) => ({ text: l.zh, pitch: PITCH[l.who] })), ...(q ? [{ text: `问：${q}`, pitch: 1 }] : [])], base),
@@ -110,7 +117,11 @@ function ChoicePart<T extends Reply | Talk>({ items, kind, onFinish, start, onAt
   const [missed, setMissed] = useState<T[]>([]);
   const q = items[i];
   const play = () => ('ask' in q ? voice.say(q.ask) : voice.dialogue(q.lines, q.q));
-  useEffect(() => { const id = window.setTimeout(play, 350); return () => window.clearTimeout(id); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (voice.status !== 'ready') return;
+    const id = window.setTimeout(play, 350);
+    return () => window.clearTimeout(id);
+  }, [i, voice.status]); // eslint-disable-line react-hooks/exhaustive-deps
   const ok = pick !== null && q.a.includes(pick);
   const choose = (k: number) => { if (pick !== null) return; setPick(k); actions.answered(q.a.includes(k)); };
   const next = () => {
@@ -124,6 +135,7 @@ function ChoicePart<T extends Reply | Talk>({ items, kind, onFinish, start, onAt
       <Progress i={i} n={items.length} />
       <div className="q-prompt">
         <p className="q-ask small">{t(`Урок ${q.lesson} · стр. ${q.page} · №${q.n}`, `Lesson ${q.lesson} · p. ${q.page} · No. ${q.n}`)}</p>
+        <VoiceWarning />
         <button className="btn lg ls-play" onClick={play}>▶ {kind === 'reply' ? t('Послушать вопрос', 'Play the question') : t('Послушать диалог', 'Play the dialogue')}</button>
       </div>
       <div className="opts ls-opts">
@@ -158,6 +170,7 @@ function FillText({ text, vals, setVal, checked }: { text: FillText; vals: strin
   let gap = -1;
   return (
     <div className="panel ls-fill">
+      <VoiceWarning />
       <button className="btn ls-play" onClick={() => voice.dialogue(spoken)}>▶ {t('Послушать текст', 'Play the text')}</button>
       {text.lines.map((l, j) => (
         <p key={j} className="ls-line">{l.who && <b>{l.who}：</b>}

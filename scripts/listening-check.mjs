@@ -18,6 +18,18 @@ const server = createServer((req, res) => {
 
 const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
 const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' })).newPage();
+// A Chinese voice that records what it is asked to say (the test browser has none of its own).
+await page.addInitScript(() => {
+  window.__spoken = [];
+  const v = { voiceURI: 'zh-test', name: 'Tingting', lang: 'zh-CN', localService: true, default: true };
+  Object.defineProperty(window, 'speechSynthesis', { value: {
+    getVoices: () => [v], cancel() {}, pause() {}, resume() {}, speaking: false, pending: false,
+    addEventListener() {}, removeEventListener() {},
+    speak(u) { window.__spoken.push(u.text); setTimeout(() => { u.onstart?.(); u.onend?.(); }, 5); },
+  } });
+  window.SpeechSynthesisUtterance = function (text) { this.text = text; };
+});
+const spoken = () => page.evaluate(() => window.__spoken.slice());
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
@@ -34,8 +46,14 @@ await page.screenshot({ path: `${OUT}/hub.png`, fullPage: true });
 check((await page.locator('.paper-sec').count()) === 4, 'four listening parts');
 check(await page.locator('text=· 30').isVisible() && await page.locator('text=· 28').isVisible() && await page.locator('text=· 44').isVisible(), 'counts: 30 replies, 28 dialogues, 44 dictation words');
 
-// 一 choose the reply: always the first option; the right one is marked, the script appears.
+// 一 choose the reply: the play button reads the question aloud.
 await go('midterm/listen/reply');
+await page.evaluate(() => { window.__spoken.length = 0; });
+await page.click('.ls-play');
+await page.waitForTimeout(200);
+const said = await spoken();
+check(said.length === 1 && /[？?！!。]$/.test(said[0]), `“Play the question” speaks the question (${said.join(' / ')})`);
+// Always the first option; the right one is marked, the script appears.
 let n = 0, right = 0;
 while (!(await resultShown()) && n++ < 40) {
   await page.locator('.ls-opts .opt').first().click();
@@ -51,6 +69,11 @@ check(n === 30 && await page.locator(`text=Верно: ${right} из 30`).isVisi
 // 二 dialogues: the script shows both speakers and the question.
 await go('midterm/listen/talk');
 await page.locator('.ls-opts .opt').nth(1).click();
+await page.evaluate(() => { window.__spoken.length = 0; });
+await page.click('.ls-play');
+await page.waitForTimeout(200);
+const lines = await spoken();
+check(lines.length >= 2 && lines[lines.length - 1].startsWith('问：'), `“Play the dialogue” speaks every line, then the question (${lines.length} parts)`);
 check((await page.locator('.ls-script b', { hasText: '问' }).count()) === 1 && (await page.locator('.ls-script b', { hasText: /男|女/ }).count()) >= 1, 'a dialogue script shows 男/女 lines and the question');
 await page.screenshot({ path: `${OUT}/talk.png`, fullPage: true });
 n = 1;
