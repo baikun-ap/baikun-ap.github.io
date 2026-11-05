@@ -705,3 +705,18 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 .ex-mid { display: grid; flex: 1; }
 .ex-word .examples { margin-top: 10px; }
 .mt > .back + .eyebrow { display: block; margin-top: 12px; }
+
+/* ---------- listening midterm ---------- */
+.ls-play { margin: 8px auto; display: inline-flex; }
+.ls-opts .opt { text-align: left; }
+.ls-opts .opt .zh { font-size: 19px; }
+.ls-script { margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--mist, #f5f5f7); }
+.ls-script p { margin: 2px 0; }
+.ls-script .zh { font-size: 18px; }
+.q-audio { display: flex; justify-content: center; margin: 8px 0; }
+.ls-fill { margin: 12px 0; }
+.ls-line { font-size: 19px; line-height: 2.2; margin: 6px 0; }
+.ls-gap { display: inline-flex; flex-direction: column; vertical-align: middle; margin: 0 4px; }
+.ls-gap .search { width: 104px; margin: 0; padding: 4px 8px; text-align: center; font-size: 17px; }
+.ls-gap .search.ok { border-color: var(--good); background: var(--good-wash); }
+.ls-gap .search.bad { border-color: var(--bad); background: var(--bad-wash); }

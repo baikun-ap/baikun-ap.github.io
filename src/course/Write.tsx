@@ -139,14 +139,15 @@ function useBoxSize(n: number) {
 
 /* ---------- the writing task ---------- */
 
-export function WritePart({ items, onFinish, start, onAt, byPinyin }: { items: WriteWord[]; onFinish: (r: Result & { missed: WriteWord[] }) => void; start?: number; onAt?: (i: number) => void; byPinyin?: boolean }) {
+export function WritePart({ items, onFinish, start, onAt, byPinyin, byAudio }: { items: WriteWord[]; onFinish: (r: Result & { missed: WriteWord[] }) => void; start?: number; onAt?: (i: number) => void; byPinyin?: boolean; byAudio?: boolean }) {
   const { actions } = useCourseCtx();
   const [i, setI] = useAt(start, onAt);
   const [mode, setModeState] = useState<Mode>(() => { const m = readLS(LS_MODE); return m === 'screen' || m === 'paper' ? m : 'free'; });
   const setMode = (m: Mode) => { setModeState(m); writeLS(LS_MODE, m); };
   const [askPySaved, setAskPyState] = useState(() => readLS(LS_PY) !== 'off');
   // Prompted by pinyin ("write the correct 汉字"), there is no pinyin to ask for.
-  const askPy = !byPinyin && askPySaved;
+  // Prompted by pinyin there is no pinyin to ask for; a dictation always asks pinyin first, then characters.
+  const askPy = byAudio || (!byPinyin && askPySaved);
   const setAskPy = (v: boolean) => { setAskPyState(v); writeLS(LS_PY, v ? 'on' : 'off'); };
   const [py, setPy] = useState('');
   const [pyRes, setPyRes] = useState<'ok' | 'tones' | 'wrong' | null>(null);
@@ -196,11 +197,12 @@ export function WritePart({ items, onFinish, start, onAt, byPinyin }: { items: W
           <button className={mode === 'screen' ? 'on' : ''} onClick={() => setMode('screen')}>{t('🎯 Черты', '🎯 Strokes')}</button>
           <button className={mode === 'paper' ? 'on' : ''} onClick={() => setMode('paper')}>{t('📝 Бумага', '📝 Paper')}</button>
         </div>
-        {!byPinyin && <label className="check small"><input type="checkbox" checked={askPy} onChange={(e) => setAskPy(e.target.checked)} /> {t('спрашивать пиньинь', 'ask pinyin')}</label>}
+        {!byPinyin && !byAudio && <label className="check small"><input type="checkbox" checked={askPy} onChange={(e) => setAskPy(e.target.checked)} /> {t('спрашивать пиньинь', 'ask pinyin')}</label>}
       </div>
       <div className="q-prompt">
-        <p className="q-ask">{askPy ? t('Напиши пиньинь и иероглифы', 'Write the pinyin and the characters') : t('Напиши иероглифы', 'Write the characters')} <span className="muted small">· {w.tag ?? `${t('урок', 'lesson')} ${w.lesson}`}</span></p>
-        {byPinyin ? <div className="q-ru"><Py text={w.py} className="py-l" /></div> : <div className="q-ru">{L(w.ru)}</div>}
+        <p className="q-ask">{byAudio ? t('Послушай → напиши пиньинь → потом иероглифы', 'Listen → write the pinyin → then the characters') : askPy ? t('Напиши пиньинь и иероглифы', 'Write the pinyin and the characters') : t('Напиши иероглифы', 'Write the characters')} <span className="muted small">· {w.tag ?? `${t('урок', 'lesson')} ${w.lesson}`}</span></p>
+        {byAudio ? <div className="q-audio"><Say text={w.zh} big auto={i} label={t('Послушать ещё раз', 'Listen again')} /></div>
+          : byPinyin ? <div className="q-ru"><Py text={w.py} className="py-l" /></div> : <div className="q-ru">{L(w.ru)}</div>}
         <p className="muted small">{t(`${chars.length} ${chars.length === 1 ? 'иероглиф' : chars.length < 5 ? 'иероглифа' : 'иероглифов'}`, `${chars.length} ${chars.length === 1 ? 'character' : 'characters'}`)}</p>
       </div>
 
@@ -253,6 +255,7 @@ export function WritePart({ items, onFinish, start, onAt, byPinyin }: { items: W
             <div className="zh-xxl">{w.zh}</div>
             <Py text={w.py} className="py-l" />
             <Say text={w.zh} />
+            {(byPinyin || byAudio) && w.ru && <p className="muted">{L(w.ru)}</p>}
             <CharNotes zh={w.zh} />
             {selfCheck && (
               <div className="row center">

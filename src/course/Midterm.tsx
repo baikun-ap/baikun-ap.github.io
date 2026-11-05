@@ -7,6 +7,7 @@ import { Progress, Runner, WritePart, readLS, useAt, writeLS, type Result, type 
 import { t } from '../i18n';
 import Paper, { SlideWrite } from './Paper';
 import Exam18 from './Exam18';
+import Listening from './Listening';
 
 /**
  * Midterm practice for Book 1A, lessons 1–8, in the three formats of the
@@ -47,6 +48,7 @@ export default function Midterm({ part, sub }: { part?: string; sub?: string }) 
 
   if (part === 'paper') return <Paper sub={sub} />;
   if (part === 'words18') return <Exam18 sub={sub} />;
+  if (part === 'listen') return <Listening sub={sub} />;
   if (part === 'slide') return <SlideWrite />;
   if (part === 'write') return <Shell title={t('1. Написание: иероглифы и пиньинь', '1. Writing: characters and pinyin')}>{runner(words, (items, done, start, onAt) => <WritePart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
   if (part === 'read') return <Shell title={t('2. Чтение: вставь слово', '2. Reading: fill the gap')}>{runner(fill, (items, done, start, onAt) => <FillPart items={items} onFinish={done} start={start} onAt={onAt} />)}</Shell>;
@@ -59,6 +61,12 @@ export default function Midterm({ part, sub }: { part?: string; sub?: string }) 
       <span className="eyebrow">{t('期中考试 · МИДТЕРМ', '期中考试 · MIDTERM')}</span>
       <h1 className="serif h1">{t('Подготовка к мидтерму', 'Midterm prep')}</h1>
       <p className="muted lead">{t('《汉语教程》 книга 1A, уроки 1–8: все слова из книги и задания, как на мидтерме.', '《汉语教程》 Book 1A, lessons 1–8: every word from the book and the tasks of the midterm.')}</p>
+
+      <a className="panel mt-pdf mt-paper" href="#/midterm/listen">
+        <span className="mt-zh zh">听</span>
+        <div><h3>{t('🎧 Мидтерм по аудированию (уроки 6–8)', '🎧 Listening midterm (lessons 6–8)')}</h3>
+          <p className="muted small">{t('《汉语听力教程》, стр. 22–36: послушай и выбери ответ, диалоги, диктант «пиньинь → иероглифы», текст с пропусками.', '《汉语听力教程》, pp. 22–36: listen and choose the answer, dialogues, dictation “pinyin → characters”, a text with gaps.')}</p></div>
+      </a>
 
       <a className="panel mt-pdf mt-paper" href="#/midterm/words18">
         <span className="mt-zh zh">考</span>

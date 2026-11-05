@@ -104,6 +104,7 @@ export function pickVoice(preferredURI?: string | null): SpeechSynthesisVoice | 
 export interface SpeakOptions {
   voiceURI?: string | null;
   rate?: number;
+  pitch?: number;
   onStart?: () => void;
   onEnd?: () => void;
 }
@@ -122,12 +123,35 @@ export function speak(text: string, opts: SpeakOptions = {}): boolean {
   u.voice = voice;
   u.lang = voice.lang || 'zh-CN';
   u.rate = opts.rate ?? 0.8;
+  if (opts.pitch) u.pitch = opts.pitch;
   if (opts.onStart) u.onstart = () => opts.onStart?.();
   if (opts.onEnd) {
     u.onend = () => opts.onEnd?.();
     u.onerror = () => opts.onEnd?.();
   }
   window.speechSynthesis.speak(u);
+  return true;
+}
+
+/**
+ * Speaks several lines one after another — a dialogue — each with its own
+ * pitch so two speakers can be told apart with a single voice.
+ */
+export function speakSequence(lines: { text: string; pitch?: number }[], opts: SpeakOptions = {}): boolean {
+  if (!ttsSupported || !lines.length) return false;
+  const voice = pickVoice(opts.voiceURI);
+  if (!voice) return false;
+  window.speechSynthesis.cancel();
+  lines.forEach((l, k) => {
+    const u = new SpeechSynthesisUtterance(l.text);
+    u.voice = voice;
+    u.lang = voice.lang || 'zh-CN';
+    u.rate = opts.rate ?? 0.8;
+    if (l.pitch) u.pitch = l.pitch;
+    if (k === 0 && opts.onStart) u.onstart = () => opts.onStart?.();
+    if (k === lines.length - 1 && opts.onEnd) { u.onend = () => opts.onEnd?.(); u.onerror = () => opts.onEnd?.(); }
+    window.speechSynthesis.speak(u);
+  });
   return true;
 }
 
