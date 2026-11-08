@@ -5,6 +5,7 @@
 //
 // Run: node scripts/word-sheet.mjs jc1a 1 7   →   public/files/jc1a-1-7.pdf
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -127,7 +128,7 @@ fs.mkdirSync('.cache', { recursive: true });
 fs.writeFileSync('.cache/word-sheet.html', html);
 const out = `public/files/${book}-${from}-${to}.pdf`;
 fs.mkdirSync(path.dirname(out), { recursive: true });
-const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const page = await b.newPage();
 await page.goto(`file://${path.join(ROOT, '.cache/word-sheet.html')}`);
 await page.evaluate(() => document.fonts.ready);

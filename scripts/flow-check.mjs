@@ -1,6 +1,7 @@
 // Walks a lesson like a learner: answers quizzes, builds sentences, reviews
 // cards, then reloads and checks the progress survived.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -14,7 +15,7 @@ const server = createServer((req, res) => {
   try { const b = readFileSync(join(DIST, p)); res.writeHead(200, { 'content-type': types[extname(p)] ?? 'application/octet-stream' }); res.end(b); }
   catch { res.writeHead(404); res.end(); }
 }).listen(4176);
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' })).newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));

@@ -2,6 +2,7 @@
 // overflow, planet switching reversible, entrance cleans up after itself.
 // CDN assets are replaced with local stand-ins of the same geometry.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -18,7 +19,7 @@ const server = createServer((req, res) => {
 
 const CUT = { '3346cc4d': 'earth', '640b239a': 'venus', '3d559490': 'mars' };
 const STILL = { '508c64b8': 'earth', 'cf55d1d8': 'venus', '0ba6de7c': 'mars' };
-const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const sizes = [[320, 568], [375, 667], [390, 844], [430, 932], [480, 800], [540, 720], [768, 1024], [820, 1180], [1024, 768], [1280, 800], [1353, 1163], [1440, 900], [1920, 1080], [2560, 1440], [844, 390]];
 let fail = 0;
 for (const [w, h] of sizes) {

@@ -2,6 +2,7 @@
 // options are the book's, transcripts show after answering, the dictation
 // asks pinyin then characters, the gap text accepts characters or pinyin.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -16,7 +17,7 @@ const server = createServer((req, res) => {
   catch { res.writeHead(404); res.end(); }
 }).listen(4179);
 
-const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' })).newPage();
 // A Chinese voice that records what it is asked to say (the test browser has none of its own).
 await page.addInitScript(() => {

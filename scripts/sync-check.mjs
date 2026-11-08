@@ -1,6 +1,7 @@
 // Two "devices" sync through a fake GitHub Gist API: progress made on one
 // appears on the other, and both copies merge instead of overwriting.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -26,7 +27,7 @@ async function fakeGitHub(route) {
   return json(g);
 }
 
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const fails = []; const check = (ok, msg) => { console.log(ok ? 'ok  ' : 'FAIL', msg); if (!ok) fails.push(msg); };
 async function device() {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' });

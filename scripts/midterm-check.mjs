@@ -2,6 +2,7 @@
 // result screen (writing on paper and on screen, reading, building, answering),
 // the practice midterm, no page errors. Screens go to shots/midterm/.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -16,7 +17,7 @@ const server = createServer((req, res) => {
   catch { res.writeHead(404); res.end(); }
 }).listen(4176);
 
-const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' })).newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));

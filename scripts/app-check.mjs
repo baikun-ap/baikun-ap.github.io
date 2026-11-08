@@ -1,6 +1,7 @@
 // Course app check in real Chromium: every route at phone and desktop width,
 // no horizontal overflow, no console errors, plus a walk through one lesson.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -16,7 +17,7 @@ const server = createServer((req, res) => {
 }).listen(4175);
 
 const CUT = { '3346cc4d': 'earth', '640b239a': 'venus', '3d559490': 'mars' };
-const b = await chromium.launch({ executablePath: process.env.CHROME ?? '/opt/pw-browsers/chromium' });
+const b = await chromium.launch({ executablePath: chromePath() });
 const routes = ['', 'course', 'lesson/starter-1/1', 'lesson/starter-1/2', 'lesson/starter-1/3', 'lesson/starter-1/4', 'lesson/starter-1/5', 'lesson/starter-1/6', 'lesson/starter-1/7', 'lesson/starter-1/8', 'lesson/jc1a-8/1', 'lesson/jc1a-8/6', 'lesson/jc1a-15/7', 'cards', 'pinyin', 'tones', 'grammar', 'hanzi', 'hanzi/好', 'settings', 'micro', 'micro/cards'];
 const only = process.env.ONLY;
 let fail = 0;

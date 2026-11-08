@@ -38,6 +38,7 @@ bai.kun — сайт для изучения китайского и подго�
 
 ```
 npm ci
+npx playwright install --with-deps chromium   # один раз: браузер для проверок
 npm run build                      # tsc + сборка, должно пройти без ошибок
 node scripts/app-check.mjs         # все страницы, телефон и компьютер
 LOCALE=en-US node scripts/app-check.mjs
@@ -47,6 +48,7 @@ node scripts/flow-check.mjs
 node scripts/sync-check.mjs
 ```
 
-Проверки запускают Chromium через Playwright. Каждая должна закончиться
+Проверки запускают Chromium через Playwright (свой путь к браузеру можно
+задать переменной `CHROME=/путь/к/chromium`). Каждая должна закончиться
 строкой `... ok`. Перед коммитом: `git checkout -- shots/` (скриншоты проверок
 не коммитим). В описании PR напиши, что изменено и какие проверки прошли.
