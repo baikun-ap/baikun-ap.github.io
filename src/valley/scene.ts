@@ -39,8 +39,8 @@ function build(container: HTMLElement, onReady: () => void): Valley {
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mobile = window.matchMedia('(max-width: 820px)').matches || ('ontouchstart' in window && window.innerWidth <= 820);
 const TAU = Math.PI * 2;
-const FLOWER_COUNT = mobile ? 760 : 2200;
-const LEAF_COUNT = mobile ? 900 : 3600;
+const FLOWER_COUNT = mobile ? 1500 : 2200;
+const LEAF_COUNT = mobile ? 1800 : 3600;
 
 const terrainHeight = (x: number, z: number): number => {
   const valleyBowl = 1.8 - Math.max(0, Math.abs(x) - 17) * 0.24;
@@ -504,10 +504,10 @@ function frame(): void {
   const flightT = (((progress + introAmount * 0.06) % 1) + 1) % 1;
   const pathPosition = path.getPointAt(flightT);
   const lookAhead = path.getPointAt((flightT + 0.018) % 1);
-  const cameraHeight = (mobile ? 1.7 : 2.8) + Math.sin(time * 0.22) * 0.16;
+  const cameraHeight = (mobile ? 2.2 : 2.8) + Math.sin(time * 0.22) * 0.16;
   camera.position.lerp(new THREE.Vector3(pathPosition.x, pathPosition.y + cameraHeight, pathPosition.z), 0.12);
   const mx = mouse.x > 5 ? 0 : mouse.x, my = mouse.y > 5 ? 0 : mouse.y;
-  camera.lookAt(lookAhead.x + mx * 1.2, lookAhead.y + (mobile ? -5.5 : 0.6) + my * 0.6, lookAhead.z);
+  camera.lookAt(lookAhead.x + mx * 1.2, lookAhead.y + (mobile ? -0.6 : 0.6) + my * 0.6, lookAhead.z);
   camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, -mx * 0.025, 0.08);
 
   setUniforms(time);

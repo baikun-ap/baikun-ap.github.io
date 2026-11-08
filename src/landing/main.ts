@@ -106,11 +106,13 @@ if (motion) {
 
   // Hero drifts up and fades as it leaves; the valley darkens behind the content.
   safe(() => {
-    animate('.hero > *', {
-      y: (_: unknown, i: number) => [0, -120 - i * 40],
-      opacity: [1, 0],
-      ease: 'linear',
-      autoplay: scrub('#hero', { target: 'top', container: 'top' }, { target: 'bottom', container: 'top' }),
+    $$('.hero > *').forEach((el, i) => {
+      animate(el, {
+        y: [0, -120 - i * 40],
+        opacity: [1, 0],
+        ease: 'linear',
+        autoplay: scrub('#hero', { target: 'top', container: 'top' }, { target: 'bottom', container: 'top' }),
+      });
     });
     animate('.scrim', {
       opacity: [0, 1],
@@ -155,6 +157,8 @@ if (motion) {
     $$('.world').forEach((card, i) => {
       animate(card, {
         y: [90 + i * 40, 0],
+        rotateX: [55, 0],
+        rotateY: [(i - 1) * 18, 0],
         opacity: [0, 1],
         ease: 'outQuad',
         autoplay: scrub(card, { target: 'top', container: 'bottom' }, { target: 'top', container: '75%' }),
@@ -168,24 +172,24 @@ if (motion) {
     });
   });
 
-  // Eight steps: the row slides sideways while the section is pinned.
+  // Eight steps: a 3D deck of cards, like a stack of documents. While the
+  // section is pinned, the top card flips up and away and the next one
+  // slides forward into its place.
   safe(() => {
-    const track = $('#track');
-    if (!track) return;
-    const distance = () => Math.max(0, track.scrollWidth - window.innerWidth);
-    animate(track, {
-      x: () => [0, -distance()],
-      ease: 'linear',
+    const cards = $$('.step');
+    if (cards.length < 2) return;
+    const slot = (k: number) => ({ x: 0, y: k * 16, z: -k * 70, scale: 1 - k * 0.045, rotateY: 0, rotateZ: 0, opacity: k < 4 ? 1 : 0 });
+    const tl = createTimeline({
+      defaults: { ease: 'inOutQuad', duration: 1000 },
       autoplay: onScroll({ target: '#steps', enter: { target: 'top', container: 'top' }, leave: { target: 'bottom', container: 'bottom' }, sync: true }),
     });
-    $$('.step .hz').forEach((hz, i) => {
-      animate(hz, {
-        rotate: [i % 2 ? 12 : -12, 0],
-        scale: [0.8, 1],
-        ease: 'linear',
-        autoplay: onScroll({ target: '#steps', enter: { target: 'top', container: 'top' }, leave: { target: 'bottom', container: 'bottom' }, sync: true }),
-      });
-    });
+    cards.forEach((c, j) => tl.set(c, slot(j), 0));
+    for (let k = 0; k < cards.length - 1; k++) {
+      const at = k * 1000;
+      tl.add(cards[k], { x: (k % 2 ? 1 : -1) * window.innerWidth * 1.1, y: -60, z: 80, rotateY: (k % 2 ? 1 : -1) * 55, rotateZ: (k % 2 ? 1 : -1) * 14, ease: 'inQuad' }, at);
+      for (let j = k + 1; j < cards.length; j++) tl.add(cards[j], { ...slot(j - k - 1) }, at + 120);
+    }
+    tl.add({ duration: 400 }, (cards.length - 1) * 1000);
   });
 
   // Numbers count up with the scroll.
@@ -208,6 +212,7 @@ if (motion) {
     $$('.exam').forEach((card, i) => {
       animate(card, {
         x: [i ? 120 : -120, 0],
+        rotateY: [i ? -40 : 40, 0],
         opacity: [0, 1],
         ease: 'outQuad',
         autoplay: scrub(card, { target: 'top', container: 'bottom' }, { target: 'top', container: '72%' }),
@@ -218,14 +223,17 @@ if (motion) {
   // 开始: the two characters grow out of the ground.
   safe(() => {
     const { chars } = splitText('#kai', { chars: { class: 'char' } });
-    animate(chars, {
-      y: ['40%', 0],
-      scale: [0.3, 1],
-      rotate: (_: unknown, i: number) => [i ? 18 : -18, 0],
-      opacity: [0, 1],
-      delay: stagger(120),
-      ease: 'outBack(1.2)',
-      autoplay: scrub('#final', { target: 'top', container: 'bottom' }, { target: 'top', container: '30%' }),
+    chars.forEach((ch, i) => {
+      animate(ch, {
+        y: ['40%', 0],
+        scale: [0.3, 1],
+        rotateY: [i ? -70 : 70, 0],
+        rotate: [i ? 18 : -18, 0],
+        opacity: [0, 1],
+        delay: i * 120,
+        ease: 'outBack(1.2)',
+        autoplay: scrub('#final', { target: 'top', container: 'bottom' }, { target: 'top', container: '30%' }),
+      });
     });
     animate(['.final .cap', '.final .big-pill', '.final .foot'], {
       y: [40, 0],
