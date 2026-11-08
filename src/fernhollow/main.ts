@@ -19,18 +19,18 @@ if (!valley || !container) {
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mobile = window.matchMedia('(max-width: 820px)').matches;
 const TAU = Math.PI * 2;
-const FLOWER_COUNT = mobile ? 720 : 2200;
-const LEAF_COUNT = mobile ? 1200 : 3600;
+const FLOWER_COUNT = mobile ? 760 : 2200;
+const LEAF_COUNT = mobile ? 900 : 3600;
 
 const terrainHeight = (x: number, z: number): number => {
-  const valleyBowl = -4.8 - Math.max(0, Math.abs(x) - 17) * 0.24;
+  const valleyBowl = 1.8 - Math.max(0, Math.abs(x) - 17) * 0.24;
   const ridges = Math.sin(z * 0.085 + x * 0.12) * 0.7 + Math.cos(x * 0.31 - z * 0.045) * 0.42;
   return valleyBowl + ridges + Math.sin((x + z) * 0.23) * 0.12;
 };
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020302);
-scene.fog = new THREE.FogExp2(0x020302, 0.012);
+scene.fog = new THREE.FogExp2(0x020302, 0.008);
 
 const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 180);
 camera.position.set(0, 2, 12);
@@ -40,24 +40,24 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.15 : 1.7));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMappingExposure = 0.88;
 container.appendChild(renderer.domElement);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  mobile ? 0.8 : 1.15,
-  0.72,
-  0.18,
+  mobile ? 0.12 : 0.18,
+  0.32,
+  0.56,
 );
 composer.addPass(bloomPass);
 const atmospherePass = new ShaderPass({
   uniforms: {
     tDiffuse: { value: null },
     uTime: { value: 0 },
-    uChromatic: { value: mobile ? 0.0018 : 0.0028 },
-    uNoise: { value: mobile ? 0.012 : 0.018 },
+    uChromatic: { value: mobile ? 0.00045 : 0.0007 },
+    uNoise: { value: mobile ? 0.004 : 0.006 },
     uVignette: { value: 0.22 },
     uSpeed: { value: 0 },
   },
@@ -99,10 +99,10 @@ const atmospherePass = new ShaderPass({
 });
 composer.addPass(atmospherePass);
 
-const moonLight = new THREE.DirectionalLight(0x9aa88d, 1.8);
+const moonLight = new THREE.DirectionalLight(0x829681, 0.85);
 moonLight.position.set(-18, 32, 22);
 scene.add(moonLight);
-scene.add(new THREE.HemisphereLight(0x263d35, 0x020201, 0.75));
+scene.add(new THREE.HemisphereLight(0x263d35, 0x020201, 0.38));
 
 const terrainGeometry = new THREE.PlaneGeometry(150, 220, mobile ? 54 : 86, mobile ? 72 : 112);
 terrainGeometry.rotateX(-Math.PI / 2);
@@ -116,7 +116,7 @@ terrainPositions.needsUpdate = true;
 terrainGeometry.computeVertexNormals();
 const terrain = new THREE.Mesh(
   terrainGeometry,
-  new THREE.MeshStandardMaterial({ color: 0x10150f, roughness: 1, metalness: 0, flatShading: true }),
+  new THREE.MeshStandardMaterial({ color: 0x0d1710, emissive: 0x020704, emissiveIntensity: 0.16, roughness: 1, metalness: 0, flatShading: true }),
 );
 terrain.position.z = -42;
 scene.add(terrain);
@@ -173,7 +173,7 @@ const floraVertex = `
     vec3 scatteredPosition = position + aScatter * uScatter;
     vec4 modelViewPosition = modelViewMatrix * vec4(scatteredPosition, 1.0);
     float distanceToCamera = distance(position, uCameraPosition);
-    float nearGrowth = 1.0 - smoothstep(7.0, 36.0, distanceToCamera);
+    float nearGrowth = 0.24 + 0.76 * (1.0 - smoothstep(8.0, 64.0, distanceToCamera));
     float farGrowth = smoothstep(10.0, 58.0, distanceToCamera);
     float growth = mix(nearGrowth, farGrowth, uGrowthFar);
     float sway = sin(uTime * 0.8 + aPhase + position.x * 0.2) * 0.035 * growth;
@@ -187,7 +187,7 @@ const floraVertex = `
       clipPosition.xy += normalize(cursorDelta) * influence * 0.13 * clipPosition.w;
     }
     gl_Position = clipPosition;
-    gl_PointSize = max(1.0, aSize * (0.25 + growth * 1.15) * (260.0 / -modelViewPosition.z));
+    gl_PointSize = max(1.0, aSize * (0.5 + growth * 1.1) * (260.0 / -modelViewPosition.z));
     vGlow = 0.35 + growth * 0.65 + influence * 0.65;
     vHue = aHue;
     vPhase = aPhase;
@@ -200,25 +200,29 @@ const flowerFragment = `
   varying float vHue;
   varying float vPhase;
   vec3 palette(float h) {
-    vec3 a = vec3(0.48, 0.38, 0.25);
-    vec3 b = vec3(0.48, 0.42, 0.38);
-    vec3 c = vec3(1.0, 0.92, 0.72);
-    vec3 d = vec3(0.00, 0.16, 0.28);
-    return a + b * cos(6.28318 * (c * h + d));
+    vec3 cream = vec3(0.96, 0.83, 0.61);
+    vec3 pink = vec3(0.95, 0.48, 0.56);
+    vec3 blue = vec3(0.45, 0.72, 0.92);
+    vec3 yellow = vec3(0.98, 0.88, 0.45);
+    if (h < 0.25) return mix(cream, pink, smoothstep(0.08, 0.25, h));
+    if (h < 0.5) return mix(pink, blue, smoothstep(0.25, 0.5, h));
+    if (h < 0.75) return mix(blue, yellow, smoothstep(0.5, 0.75, h));
+    return mix(yellow, cream, smoothstep(0.75, 1.0, h));
   }
   void main() {
     vec2 p = gl_PointCoord - 0.5;
     float radius = length(p);
     float angle = atan(p.y, p.x);
-    float petalEdge = 0.23 + 0.19 * pow(0.5 + 0.5 * sin(angle * 5.0 + vPhase), 2.0);
-    float petals = 1.0 - smoothstep(petalEdge, petalEdge + 0.07, radius);
-    float softCircle = 1.0 - smoothstep(0.46, 0.5, radius);
-    float core = 1.0 - smoothstep(0.0, 0.16, radius);
+    float petalShape = pow(0.5 + 0.5 * cos(angle * 6.0 + vPhase), 1.65);
+    float petalEdge = mix(0.25, 0.43, petalShape);
+    float petals = 1.0 - smoothstep(petalEdge, petalEdge + 0.035, radius);
+    float softCircle = 1.0 - smoothstep(0.44, 0.5, radius);
+    float core = 1.0 - smoothstep(0.0, 0.14, radius);
     float alpha = petals * softCircle;
     if (alpha < 0.02) discard;
-    vec3 color = mix(palette(vHue), vec3(1.0, 0.76, 0.38), core * 0.75);
+    vec3 color = mix(palette(vHue), vec3(1.0, 0.92, 0.68), core * 0.9);
     float shimmer = 0.9 + 0.1 * sin(uTime * 1.8 + vPhase);
-    gl_FragColor = vec4(color * vGlow * shimmer, alpha * min(1.0, vGlow));
+    gl_FragColor = vec4(color * (0.42 + vGlow * 0.42) * shimmer, alpha * 0.82);
   }
 `;
 
@@ -253,7 +257,7 @@ const createFlora = (count: number, kind: 'flower' | 'leaf'): FloraData => {
     positions[i * 3 + 1] = point.y;
     positions[i * 3 + 2] = point.z;
     const seed = i * 5.21 + (kind === 'flower' ? 0 : 2000);
-    sizes[i] = kind === 'flower' ? 1.6 + random(seed) * 3.4 : 1.3 + random(seed) * 2.6;
+    sizes[i] = kind === 'flower' ? 3.2 + random(seed) * 5.5 : 1.1 + random(seed) * 2.1;
     phases[i] = random(seed + 1.1) * TAU;
     hues[i] = random(seed + 3.7);
     const scatterLength = kind === 'flower' ? 7 + random(seed + 5.4) * 16 : 0;
@@ -280,7 +284,7 @@ const createFlora = (count: number, kind: 'flower' | 'leaf'): FloraData => {
     fragmentShader: kind === 'flower' ? flowerFragment : leafFragment,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
   });
   return { geometry, material };
 };
@@ -443,7 +447,7 @@ const setUniforms = (time: number): void => {
   atmospherePass.uniforms.uTime.value = time;
   atmospherePass.uniforms.uSpeed.value = Math.min(1, Math.abs(scrollVelocity) * 55);
   atmospherePass.uniforms.uVignette.value = 0.22 + Math.min(0.32, Math.abs(scrollVelocity) * 16);
-  bloomPass.strength = (mobile ? 0.8 : 1.15) + hoverAmount * 0.28;
+  bloomPass.strength = (mobile ? 0.12 : 0.18) + hoverAmount * 0.04;
 };
 
 const clock = new THREE.Clock();
@@ -477,18 +481,18 @@ const animate = (): void => {
   const flightT = (progress + introAmount * 0.06) % 1;
   const pathPosition = path.getPointAt(flightT);
   const lookAhead = path.getPointAt((flightT + 0.018) % 1);
-  const cameraHeight = 2.8 + Math.sin(time * 0.22) * 0.16;
+  const cameraHeight = (mobile ? 1.7 : 2.8) + Math.sin(time * 0.22) * 0.16;
   camera.position.lerp(new THREE.Vector3(pathPosition.x, pathPosition.y + cameraHeight, pathPosition.z), 0.12);
-  camera.lookAt(lookAhead.x + mouse.x * 1.2, lookAhead.y + 0.6 + mouse.y * 0.6, lookAhead.z);
+  camera.lookAt(lookAhead.x + mouse.x * 1.2, lookAhead.y + (mobile ? 0.25 : 0.6) + mouse.y * 0.6, lookAhead.z);
   camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, -mouse.x * 0.025, 0.08);
 
   setUniforms(time);
   composer.render();
 
-  if (!ready && introElapsed > (reducedMotion ? 0.3 : 1.35)) {
+  if (!ready && introElapsed > (reducedMotion ? 0.04 : 0.1)) {
     ready = true;
     loader?.classList.add('gone');
-    window.setTimeout(() => ui?.classList.add('on'), reducedMotion ? 0 : 160);
+    window.setTimeout(() => ui?.classList.add('on'), reducedMotion ? 0 : 350);
   }
   window.requestAnimationFrame(animate);
 };
