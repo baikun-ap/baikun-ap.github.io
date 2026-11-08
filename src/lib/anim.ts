@@ -8,13 +8,14 @@ import { animate, onScroll, stagger } from 'animejs';
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-type ScrollRoot = HTMLElement | Window;
+type ScrollRoot = HTMLElement;
 
 /** Prefer the course scroller when it owns overflow; otherwise use the window. */
 function scrollRoot(main: HTMLElement): ScrollRoot {
   const style = getComputedStyle(main);
   const ownsScroll = main.scrollHeight > main.clientHeight && /(auto|scroll|overlay)/.test(style.overflowY);
-  return ownsScroll ? main : window;
+  // Anime.js uses document.body as its internal sentinel for window scrolling.
+  return ownsScroll ? main : document.body;
 }
 
 function scrollObserver(target: Element, container: ScrollRoot) {
@@ -23,9 +24,7 @@ function scrollObserver(target: Element, container: ScrollRoot) {
     enter: 'bottom 88%',
     leave: 'top 12%',
     sync: true,
-    // Anime's DOM target type does not include Window, but the runtime accepts
-    // it as the native scroll root. The branch is chosen above, not assumed.
-    container: container as unknown as HTMLElement,
+    container,
   });
 }
 
