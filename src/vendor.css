@@ -1,0 +1,80 @@
+/*
+ * Tailwind v4 for the vendored components only (Bklit charts, Kokonut UI).
+ * No preflight, so the site's own styles are untouched; classes are generated
+ * just from those folders, and `dark:` follows the site's theme switch.
+ */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./components/charts";
+@source "./components/kokonutui";
+@source "./components/shimmering-text.tsx";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* Bklit / Kokonut theme tokens, scoped to their wrapper so they never touch the site's own variables.
+   Values from Bklit's default theme (light and dark). */
+.bk {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --radius: 0.625rem;
+  --radius-xl: calc(var(--radius) + 4px);
+  --chart-1: oklch(58.5% 0.233 277.117);
+  --chart-2: oklch(85.2% 0.199 91.936);
+  --chart-3: oklch(66.7% 0.295 322.15);
+  --chart-4: oklch(0.56 0.021 213.5);
+  --chart-5: oklch(0 0 0);
+  --chart-background: oklch(0.915 0 0);
+  --chart-foreground: oklch(0.474 0 285);
+  --chart-foreground-muted: oklch(0.862 0 260);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: oklch(0.677 0 72.411);
+  --chart-grid: oklch(0.917 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: var(--popover);
+  --chart-tooltip-foreground: var(--popover-foreground);
+  --chart-tooltip-muted: var(--muted-foreground);
+  --chart-indicator-color: oklch(0.21 0.006 285);
+  --chart-indicator-secondary-color: oklch(0.913 0 0);
+  --chart-marker-background: oklch(0.833 0 260);
+  --chart-marker-border: oklch(0.85 0.01 260);
+  --chart-marker-foreground: oklch(0.3 0.01 260);
+  --chart-marker-badge-background: oklch(0 0 0);
+  --chart-marker-badge-foreground: oklch(0.84 0 0);
+  --chart-segment-background: oklch(0.756 0 0 / 0.06);
+  --chart-segment-line: oklch(0.5 0 0 / 0.25);
+  --chart-label: oklch(0.45 0.01 260);
+}
+:root[data-theme='dark'] .bk {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --chart-5: oklch(1 0 0);
+  --chart-background: oklch(0.145 0 0);
+  --chart-foreground: oklch(0.45 0 0);
+  --chart-foreground-muted: oklch(0.65 0.01 260);
+  --chart-crosshair: oklch(0.72 0.0158 281.84);
+  --chart-grid: oklch(0.6 0.0124 243.77 / 0.25);
+  --chart-indicator-color: oklch(1 0 0);
+  --chart-indicator-secondary-color: oklch(0.145 0 0);
+  --chart-marker-background: oklch(0.25 0.01 260);
+  --chart-marker-border: oklch(0.4 0.01 260);
+  --chart-marker-foreground: oklch(0.9 0 0);
+  --chart-marker-badge-background: oklch(1 0 0);
+  --chart-marker-badge-foreground: oklch(0.15 0 0);
+  --chart-segment-background: oklch(0.41 0.0127 248.14 / 0.25);
+  --chart-segment-line: oklch(1 0 0 / 0.25);
+  --chart-label: oklch(0.75 0.01 260);
+}
+.bk.activity { display: grid; gap: 16px; }
+@media (min-width: 960px) { .bk.activity { grid-template-columns: 1fr 1.25fr; align-items: start; } }
+.bk .panel { margin: 0; }
+.bk-chart .row { margin-bottom: 8px; }
+.bk-chart .h3 { margin: 0; font-size: 20px; }
+.bk-key { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; }
+.bk-key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; }

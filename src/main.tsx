@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 import './course/x.css';
+import './vendor.css';
+import { installMotion } from './lib/anim';
+
+installMotion();
 
 /*
  * The subset is preloaded in the document head, so its bytes are already in the

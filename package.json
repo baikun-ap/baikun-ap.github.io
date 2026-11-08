@@ -18,14 +18,25 @@
     "hero": "node scripts/hero-check.mjs"
   },
   "dependencies": {
+    "animejs": "^4.5.0",
+    "clsx": "^2.1.1",
+    "d3-array": "^3.2.5",
+    "d3-scale": "^4.0.3",
+    "d3-shape": "^3.2.1",
     "firebase": "^11.10.0",
     "hanzi-writer": "^3.7.2",
     "idb-keyval": "^6.3.0",
+    "motion": "^14.10.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/d3-array": "^3.2.2",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.2.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
@@ -34,6 +45,7 @@
     "oxlint": "^1.79.0",
     "playwright": "^1.62.1",
     "subset-font": "^2.7.0",
+    "tailwindcss": "^4.3.5",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   },

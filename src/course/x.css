@@ -470,6 +470,7 @@ select, .search { background: var(--card); border: 1px solid var(--ink-faint); b
 .stat { border-radius: 20px; }
 .stat b { font-family: var(--serif); font-weight: 600; font-size: 34px; color: var(--ink); letter-spacing: -.01em; }
 .stat span { color: var(--ink-muted); }
+.stat b span { font: inherit; color: inherit; letter-spacing: inherit; }
 .world { border-radius: 28px; padding: 24px; }
 .world h3 .zh, .lesson-title h1 .zh { color: var(--ink); }
 .lesson-card { border-radius: 20px; }
@@ -728,3 +729,18 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 .ls-bare { font-size: 18px; color: var(--ink-muted, #86868b); }
 .ls-py { font-size: 18px; line-height: 2.3; margin: 4px 0; }
 .ls-mini { margin-bottom: 4px; }
+
+/* ---------- microeconomics ---------- */
+@media (min-width: 900px) { .micro .mt-parts { grid-template-columns: repeat(2, 1fr); } }
+.micro .mt-zh { font-family: var(--ui); font-weight: 600; }
+.micro-off { opacity: .6; }
+.micro-bar { margin-top: 10px; max-width: 220px; }
+.micro-empty h3 { margin: 0 0 6px; }
+.micro-q { text-align: left; }
+.micro-text { font-size: 18px; line-height: 1.5; margin: 6px 0; white-space: pre-line; }
+.micro-opts .opt { font-size: 16px; line-height: 1.4; }
+.micro-opts .opt b { margin-right: 6px; color: var(--cyan); }
+.micro-explain { border-left: 3px solid var(--cyan); padding: 6px 12px; margin: 12px 0; color: var(--ink-muted, inherit); }
+.micro-answer p, .micro-answer-text { font-size: 17px; font-weight: 600; margin: 6px 0; white-space: pre-line; }
+.micro-card { display: block; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; min-height: 200px; }
+.dash-micro { margin-top: 18px; }

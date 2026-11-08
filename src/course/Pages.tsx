@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { countUp } from '../lib/anim';
 import { ALL_GRAMMAR, BOOKS, LESSONS, STEPS } from './data';
 import { GrammarCard } from './Lesson';
 import { markTone } from './exercises';
@@ -48,6 +49,21 @@ const worlds = (): { p: PlanetKey; title: string; text: string; links: [string, 
   { p: 'mars', title: t('Структура', 'Structure'), text: t('Грамматика формулами, тесты и интервальные карточки.', 'Grammar as formulas, tests and spaced-repetition flashcards.'), links: [[t('Грамматика', 'Grammar'), '#/grammar'], [t('Карточки', 'Flashcards'), '#/cards']] },
 ];
 
+const StudyActivity = lazy(() => import('./Activity'));
+
+/** A number that counts up from zero when it first appears. */
+function Num({ v }: { v: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const seen = useRef(false);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (seen.current) { ref.current.textContent = String(v); return; }
+    seen.current = true;
+    countUp(ref.current, v);
+  }, [v]);
+  return <span ref={ref}>{v}</span>;
+}
+
 export function Dashboard() {
   const { state } = useCourseCtx();
   const due = dueCards(state.cards).length;
@@ -73,11 +89,21 @@ export function Dashboard() {
       </section>
 
       <section className="stats">
-        <div className="stat"><b>{state.streak}</b><span>{t(`${plural(state.streak, 'день', 'дня', 'дней')} подряд`, state.streak === 1 ? 'day streak' : 'days in a row')}</span></div>
-        <div className="stat"><b>{due}</b><span>{t('к повторению', 'due for review')}</span></div>
-        <div className="stat"><b>{doneLessons}/{LESSONS.length}</b><span>{t('уроков пройдено', 'lessons done')}</span></div>
-        <div className="stat"><b>{todayN}</b><span>{t('ответов сегодня', 'answers today')}</span></div>
+        <div className="stat"><b><Num v={state.streak} /></b><span>{t(`${plural(state.streak, 'день', 'дня', 'дней')} подряд`, state.streak === 1 ? 'day streak' : 'days in a row')}</span></div>
+        <div className="stat"><b><Num v={due} /></b><span>{t('к повторению', 'due for review')}</span></div>
+        <div className="stat"><b><Num v={doneLessons} />/{LESSONS.length}</b><span>{t('уроков пройдено', 'lessons done')}</span></div>
+        <div className="stat"><b><Num v={todayN} /></b><span>{t('ответов сегодня', 'answers today')}</span></div>
       </section>
+
+      <Suspense fallback={<div className="panel muted small">{t('Загружаю активность…', 'Loading activity…')}</div>}>
+        <StudyActivity />
+      </Suspense>
+
+      <a className="panel mt-pdf dash-micro" href="#/micro">
+        <span className="mt-zh zh">经</span>
+        <div><h3>{t('📈 Микроэкономика', '📈 Microeconomics')}</h3>
+          <p className="muted small">{t('4 задания × 20 вопросов: тренировка, пробный экзамен на 50 вопросов, ошибки и карточки.', '4 assignments × 20 questions: practice, a 50-question mock exam, mistakes and cards.')}</p></div>
+      </a>
 
       <section className="worlds">
         {worlds().map((w) => (

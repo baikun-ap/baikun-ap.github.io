@@ -53,8 +53,12 @@ function mergeCards(a: Record<string, WordCard>, b: Record<string, WordCard>) {
 
 export function mergeCourse(local: CourseState, remote: CourseState): CourseState {
   const newer = (remote.lastDay ?? '') > (local.lastDay ?? '') ? remote : local;
-  const days = { ...remote.days };
-  for (const [d, n] of Object.entries(local.days)) days[d] = Math.max(days[d] ?? 0, n);
+  const byDay = (a: Record<string, number> = {}, b: Record<string, number> = {}) => {
+    const out = { ...b };
+    for (const [d, n] of Object.entries(a)) out[d] = Math.max(out[d] ?? 0, n);
+    return out;
+  };
+  const days = byDay(local.days, remote.days);
   return {
     ...local,
     lessons: mergeLessons(local.lessons, remote.lessons),
@@ -65,6 +69,8 @@ export function mergeCourse(local: CourseState, remote: CourseState): CourseStat
     bestStreak: Math.max(local.bestStreak, remote.bestStreak),
     lastDay: newer.lastDay,
     days,
+    right: byDay(local.right, remote.right),
+    reviews: byDay(local.reviews, remote.reviews),
     settings: local.settings,
   };
 }

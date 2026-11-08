@@ -51,6 +51,8 @@ export interface CourseState {
   bestStreak: number;
   lastDay: string | null;
   days: Record<string, number>; // day -> answers given
+  right?: Record<string, number>; // day -> answers given correctly
+  reviews?: Record<string, number>; // day -> flashcards reviewed
   settings: CourseSettings;
 }
 
@@ -162,6 +164,7 @@ export function useCourse() {
   }, [persist]);
 
   const actions = useMemo(() => {
+    const bump = (m: Record<string, number> | undefined, day: string) => ({ ...m, [day]: (m?.[day] ?? 0) + 1 });
     /** Counts toward the streak and the day log. */
     const touch = (s: CourseState, answers = 1, xp = 0): CourseState => {
       const day = today();
@@ -178,7 +181,7 @@ export function useCourse() {
 
     return {
       answered(correct: boolean) {
-        update((s) => touch(s, 1, correct ? 10 : 2));
+        update((s) => touch(correct ? { ...s, right: bump(s.right, today()) } : s, 1, correct ? 10 : 2));
       },
       visit(lesson: string, step: number) {
         update((s) => (s.last?.lesson === lesson && s.last.step === step ? s : { ...s, last: { lesson, step } }));
@@ -207,7 +210,7 @@ export function useCourse() {
         update((s) => {
           const c = s.cards[id];
           if (!c) return s;
-          return touch({ ...s, cards: { ...s.cards, [id]: scheduleCard(c, q) } }, 1, q >= 3 ? 8 : 2);
+          return touch({ ...s, cards: { ...s.cards, [id]: scheduleCard(c, q) }, reviews: bump(s.reviews, today()) }, 1, q >= 3 ? 8 : 2);
         });
       },
       removeCard(id: string) {

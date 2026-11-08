@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { enterPage } from './lib/anim';
 import { useCourse, dueCards } from './course/store';
 import { useCloud, cloudConfigured } from './course/cloud';
 import { useGithubSync } from './course/ghsync';
@@ -9,6 +10,7 @@ import { Cards, Course, Dashboard, Grammar, Hanzi, Pinyin, Settings } from './co
 import Midterm from './course/Midterm';
 import WritePage from './course/Write';
 import PartsPage from './course/Notes';
+import Micro from './course/Micro';
 import { setLang, t, useLang } from './i18n';
 
 const nav = (): { href: string; key: string; label: string; zh: string; main?: boolean }[] => [
@@ -17,6 +19,7 @@ const nav = (): { href: string; key: string; label: string; zh: string; main?: b
   { href: '#/cards', key: 'cards', label: t('Карточки', 'Cards'), zh: '卡', main: true },
   { href: '#/write', key: 'write', label: t('Письмо', 'Writing'), zh: '写', main: true },
   { href: '#/midterm', key: 'midterm', label: t('Мидтерм', 'Midterm'), zh: '考', main: true },
+  { href: '#/micro', key: 'micro', label: t('Микроэкономика', 'Microeconomics'), zh: '经' },
   { href: '#/pinyin', key: 'pinyin', label: t('Пиньинь', 'Pinyin'), zh: '拼' },
   { href: '#/tones', key: 'tones', label: t('Тоны', 'Tones'), zh: '声' },
   { href: '#/grammar', key: 'grammar', label: t('Грамматика', 'Grammar'), zh: '法' },
@@ -45,6 +48,9 @@ export default function App() {
     navigator.storage?.persist?.().catch(() => {});
   }, []);
   useEffect(() => setMore(false), [route]);
+  // Each page rises in as a stagger when it opens.
+  const routeKey = route.join('/');
+  useLayoutEffect(() => { if (state) enterPage(document.querySelector('.x-main')); }, [routeKey, !!state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.title = t('bai.kun (baikun) — курс китайского', 'bai.kun (baikun) — Chinese course'); }, [lang]);
 
   // Light or dark: the learner's choice, or the system's when set to auto.
@@ -74,6 +80,7 @@ export default function App() {
       case 'lesson': page = <Lesson id={route[1]} step={Number(route[2]) || 1} />; break;
       case 'cards': page = <Cards />; break;
       case 'midterm': page = <Midterm part={route[1]} sub={route[2]} />; break;
+      case 'micro': page = <Micro part={route[1]} />; break;
       case 'write': page = <WritePage go={route[1]} />; break;
       case 'parts': page = <PartsPage char={route[1]} />; break;
       case 'pinyin': page = <Pinyin />; break;
