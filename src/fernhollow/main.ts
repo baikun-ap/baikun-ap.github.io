@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import './style.css';
 
 const valley = document.querySelector<HTMLElement>('#valley');
@@ -6,6 +10,7 @@ const container = document.querySelector<HTMLElement>('.js-canvas-container');
 const ui = document.querySelector<HTMLElement>('#ui');
 const loader = document.querySelector<HTMLElement>('#loader');
 const sound = document.querySelector<HTMLButtonElement>('#sound');
+const go = document.querySelector<HTMLAnchorElement>('#go');
 
 if (!valley || !container) {
   throw new Error('Fernhollow scene container is missing.');
@@ -37,6 +42,62 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 container.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  mobile ? 0.8 : 1.15,
+  0.72,
+  0.18,
+);
+composer.addPass(bloomPass);
+const atmospherePass = new ShaderPass({
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0 },
+    uChromatic: { value: mobile ? 0.0018 : 0.0028 },
+    uNoise: { value: mobile ? 0.012 : 0.018 },
+    uVignette: { value: 0.22 },
+    uSpeed: { value: 0 },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uChromatic;
+    uniform float uNoise;
+    uniform float uVignette;
+    uniform float uSpeed;
+    varying vec2 vUv;
+    float hash(vec2 p) {
+      p = fract(p * vec2(123.34, 345.45));
+      p += dot(p, p + 34.345);
+      return fract(p.x * p.y);
+    }
+    void main() {
+      vec2 centred = vUv - 0.5;
+      float distanceFromCentre = length(centred);
+      vec2 direction = normalize(centred + vec2(0.0001));
+      float split = uChromatic * (0.35 + distanceFromCentre * 2.5) * (1.0 + uSpeed * 0.9);
+      float red = texture2D(tDiffuse, vUv + direction * split).r;
+      float green = texture2D(tDiffuse, vUv).g;
+      float blue = texture2D(tDiffuse, vUv - direction * split).b;
+      vec3 colour = vec3(red, green, blue);
+      float grain = (hash(vUv * (uTime + 1.0) * 80.0) - 0.5) * uNoise;
+      float vignette = smoothstep(0.92 - uVignette, 0.28, distanceFromCentre);
+      colour = colour * vignette + grain;
+      gl_FragColor = vec4(colour, 1.0);
+    }
+  `,
+});
+composer.addPass(atmospherePass);
 
 const moonLight = new THREE.DirectionalLight(0x9aa88d, 1.8);
 moonLight.position.set(-18, 32, 22);
@@ -100,14 +161,17 @@ const floraVertex = `
   uniform vec3 uCameraPosition;
   uniform float uTime;
   uniform float uGrowthFar;
+  uniform float uScatter;
   attribute float aSize;
   attribute float aPhase;
   attribute float aHue;
+  attribute vec3 aScatter;
   varying float vGlow;
   varying float vHue;
   varying float vPhase;
   void main() {
-    vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
+    vec3 scatteredPosition = position + aScatter * uScatter;
+    vec4 modelViewPosition = modelViewMatrix * vec4(scatteredPosition, 1.0);
     float distanceToCamera = distance(position, uCameraPosition);
     float nearGrowth = 1.0 - smoothstep(7.0, 36.0, distanceToCamera);
     float farGrowth = smoothstep(10.0, 58.0, distanceToCamera);
@@ -182,6 +246,7 @@ const createFlora = (count: number, kind: 'flower' | 'leaf'): FloraData => {
   const sizes = new Float32Array(count);
   const phases = new Float32Array(count);
   const hues = new Float32Array(count);
+  const scatter = new Float32Array(count * 3);
   for (let i = 0; i < count; i += 1) {
     const point = sampleFloraPosition(i, count, kind === 'flower' ? 42 : 48);
     positions[i * 3] = point.x;
@@ -191,18 +256,25 @@ const createFlora = (count: number, kind: 'flower' | 'leaf'): FloraData => {
     sizes[i] = kind === 'flower' ? 1.6 + random(seed) * 3.4 : 1.3 + random(seed) * 2.6;
     phases[i] = random(seed + 1.1) * TAU;
     hues[i] = random(seed + 3.7);
+    const scatterLength = kind === 'flower' ? 7 + random(seed + 5.4) * 16 : 0;
+    const scatterAngle = random(seed + 7.8) * TAU;
+    scatter[i * 3] = Math.cos(scatterAngle) * scatterLength;
+    scatter[i * 3 + 1] = (random(seed + 9.2) - 0.2) * scatterLength;
+    scatter[i * 3 + 2] = Math.sin(scatterAngle) * scatterLength;
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
   geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
   geometry.setAttribute('aHue', new THREE.BufferAttribute(hues, 1));
+  geometry.setAttribute('aScatter', new THREE.BufferAttribute(scatter, 3));
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uMouse: { value: new THREE.Vector2(10, 10) },
       uCameraPosition: { value: camera.position.clone() },
       uTime: { value: 0 },
       uGrowthFar: { value: kind === 'leaf' ? 1 : 0 },
+      uScatter: { value: 0 },
     },
     vertexShader: floraVertex,
     fragmentShader: kind === 'flower' ? flowerFragment : leafFragment,
@@ -218,6 +290,58 @@ const leaves = createFlora(LEAF_COUNT, 'leaf');
 scene.add(new THREE.Points(leaves.geometry, leaves.material));
 scene.add(new THREE.Points(flowers.geometry, flowers.material));
 
+const rayCanvas = document.createElement('canvas');
+rayCanvas.width = 64;
+rayCanvas.height = 256;
+const rayContext = rayCanvas.getContext('2d');
+if (rayContext) {
+  const rayGradient = rayContext.createRadialGradient(32, 22, 2, 32, 128, 128);
+  rayGradient.addColorStop(0, 'rgba(218, 231, 187, 0.34)');
+  rayGradient.addColorStop(0.28, 'rgba(153, 190, 128, 0.12)');
+  rayGradient.addColorStop(1, 'rgba(80, 116, 71, 0)');
+  rayContext.fillStyle = rayGradient;
+  rayContext.fillRect(0, 0, 64, 256);
+}
+const rayTexture = new THREE.CanvasTexture(rayCanvas);
+const rays: THREE.Sprite[] = [];
+for (let i = 0; i < (mobile ? 3 : 6); i += 1) {
+  const ray = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: rayTexture,
+    color: 0xbed8a2,
+    transparent: true,
+    opacity: 0.16 + random(i + 2) * 0.12,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  }));
+  ray.position.set((random(i + 4) - 0.5) * 52, 8 + random(i + 6) * 12, -30 - random(i + 8) * 100);
+  ray.scale.set(7 + random(i + 10) * 8, 26 + random(i + 12) * 18, 1);
+  ray.material.rotation = (random(i + 14) - 0.5) * 0.35;
+  scene.add(ray);
+  rays.push(ray);
+}
+
+const dustGeometry = new THREE.BufferGeometry();
+const dustCount = mobile ? 180 : 520;
+const dustPositions = new Float32Array(dustCount * 3);
+const dustPhases = new Float32Array(dustCount);
+for (let i = 0; i < dustCount; i += 1) {
+  const seed = i * 3.17;
+  dustPositions[i * 3] = (random(seed) - 0.5) * 65;
+  dustPositions[i * 3 + 1] = 1 + random(seed + 1) * 24;
+  dustPositions[i * 3 + 2] = 12 - random(seed + 2) * 150;
+  dustPhases[i] = random(seed + 3) * TAU;
+}
+dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+const dustMaterial = new THREE.PointsMaterial({
+  color: 0xdde8bd,
+  size: mobile ? 0.075 : 0.105,
+  transparent: true,
+  opacity: 0.42,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+});
+scene.add(new THREE.Points(dustGeometry, dustMaterial));
+
 const mouse = new THREE.Vector2(10, 10);
 const targetMouse = new THREE.Vector2(10, 10);
 let progress = 0.015;
@@ -226,6 +350,65 @@ let lastPointerY: number | null = null;
 let idleTime = 0;
 let introElapsed = 0;
 let ready = false;
+let hoverAmount = 0;
+let hoverTarget = 0;
+let soundEnabled = false;
+
+type AmbientAudio = {
+  context: AudioContext;
+  master: GainNode;
+  lowpass: BiquadFilterNode;
+  oscillators: OscillatorNode[];
+};
+
+let ambientAudio: AmbientAudio | null = null;
+
+const ensureAmbientAudio = (): AmbientAudio => {
+  if (ambientAudio) return ambientAudio;
+  const context = new AudioContext();
+  const master = context.createGain();
+  const lowpass = context.createBiquadFilter();
+  lowpass.type = 'lowpass';
+  lowpass.frequency.value = 1450;
+  lowpass.Q.value = 0.45;
+  master.gain.value = 0;
+  lowpass.connect(master);
+  master.connect(context.destination);
+  const oscillators: OscillatorNode[] = [];
+  [55, 82.5, 110].forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const voiceGain = context.createGain();
+    oscillator.type = index === 1 ? 'triangle' : 'sine';
+    oscillator.frequency.value = frequency;
+    oscillator.detune.value = index * 3 - 3;
+    voiceGain.gain.value = index === 0 ? 0.032 : 0.018;
+    oscillator.connect(voiceGain);
+    voiceGain.connect(lowpass);
+    oscillator.start();
+    oscillators.push(oscillator);
+  });
+  ambientAudio = { context, master, lowpass, oscillators };
+  return ambientAudio;
+};
+
+const setAudioHoverState = (muffled: boolean): void => {
+  if (!ambientAudio) return;
+  const now = ambientAudio.context.currentTime;
+  ambientAudio.lowpass.frequency.cancelScheduledValues(now);
+  ambientAudio.lowpass.frequency.linearRampToValueAtTime(muffled ? 320 : 1450, now + 0.9);
+  ambientAudio.master.gain.linearRampToValueAtTime(soundEnabled ? (muffled ? 0.055 : 0.13) : 0, now + 0.9);
+};
+
+const startHoverTransition = (): void => {
+  hoverTarget = reducedMotion ? 0 : 1;
+  scrollVelocity *= 0.18;
+  setAudioHoverState(true);
+};
+
+const stopHoverTransition = (): void => {
+  hoverTarget = 0;
+  setAudioHoverState(false);
+};
 
 const updateInput = (delta: number, touch = false): void => {
   scrollVelocity += delta * (touch ? 20 : 1) * 0.00022;
@@ -247,6 +430,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth <= 820 ? 1.15 : 1.7));
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 const setUniforms = (time: number): void => {
@@ -255,6 +439,11 @@ const setUniforms = (time: number): void => {
     material.uniforms.uCameraPosition.value.copy(camera.position);
     material.uniforms.uTime.value = time;
   }
+  flowers.material.uniforms.uScatter.value = hoverAmount;
+  atmospherePass.uniforms.uTime.value = time;
+  atmospherePass.uniforms.uSpeed.value = Math.min(1, Math.abs(scrollVelocity) * 55);
+  atmospherePass.uniforms.uVignette.value = 0.22 + Math.min(0.32, Math.abs(scrollVelocity) * 16);
+  bloomPass.strength = (mobile ? 0.8 : 1.15) + hoverAmount * 0.28;
 };
 
 const clock = new THREE.Clock();
@@ -263,11 +452,26 @@ const animate = (): void => {
   const time = clock.elapsedTime;
   introElapsed += delta;
   idleTime += delta;
+  hoverAmount = THREE.MathUtils.damp(hoverAmount, hoverTarget, 3.6, delta);
 
-  if (!reducedMotion && Math.abs(scrollVelocity) < 0.00002 && idleTime > 0.8) progress += delta * 0.0026;
-  progress = (progress + scrollVelocity + 1) % 1;
+  if (!reducedMotion && hoverAmount < 0.02 && Math.abs(scrollVelocity) < 0.00002 && idleTime > 0.8) progress += delta * 0.0026;
+  progress = (progress + scrollVelocity * (1 - hoverAmount) + 1) % 1;
   scrollVelocity *= Math.pow(0.055, delta);
   mouse.lerp(targetMouse, 1 - Math.pow(0.0001, delta));
+
+  const dustAttribute = dustGeometry.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < dustCount; i += 1) {
+    const seed = dustPhases[i];
+    dustAttribute.setX(i, dustAttribute.getX(i) + Math.sin(time * 0.18 + seed) * delta * 0.22);
+    dustAttribute.setY(i, dustAttribute.getY(i) + Math.sin(time * 0.32 + seed) * delta * 0.12);
+    dustAttribute.setZ(i, dustAttribute.getZ(i) + delta * (0.8 + Math.sin(seed) * 0.2));
+    if (dustAttribute.getZ(i) > 20) dustAttribute.setZ(i, -155);
+  }
+  dustAttribute.needsUpdate = true;
+  rays.forEach((ray, index) => {
+    ray.material.opacity = (0.14 + Math.sin(time * 0.28 + index) * 0.035) * (1 + hoverAmount * 0.35);
+    ray.position.x += Math.sin(time * 0.07 + index) * delta * 0.08;
+  });
 
   const introAmount = Math.min(1, introElapsed / (reducedMotion ? 0.25 : 1.15));
   const flightT = (progress + introAmount * 0.06) % 1;
@@ -279,7 +483,7 @@ const animate = (): void => {
   camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, -mouse.x * 0.025, 0.08);
 
   setUniforms(time);
-  renderer.render(scene, camera);
+  composer.render();
 
   if (!ready && introElapsed > (reducedMotion ? 0.3 : 1.35)) {
     ready = true;
@@ -290,9 +494,17 @@ const animate = (): void => {
 };
 
 sound?.addEventListener('click', () => {
-  const isPlaying = sound.getAttribute('aria-pressed') === 'true';
-  sound.setAttribute('aria-pressed', String(!isPlaying));
-  sound.setAttribute('aria-label', isPlaying ? 'Turn ambient sound on' : 'Turn ambient sound off');
+  const audio = ensureAmbientAudio();
+  if (audio.context.state === 'suspended') void audio.context.resume();
+  soundEnabled = !soundEnabled;
+  const now = audio.context.currentTime;
+  audio.master.gain.cancelScheduledValues(now);
+  audio.master.gain.linearRampToValueAtTime(soundEnabled ? (hoverAmount > 0.5 ? 0.055 : 0.13) : 0, now + 0.9);
+  sound.setAttribute('aria-pressed', String(soundEnabled));
+  sound.setAttribute('aria-label', soundEnabled ? 'Turn ambient sound off' : 'Turn ambient sound on');
 });
+
+go?.addEventListener('pointerenter', startHoverTransition);
+go?.addEventListener('pointerleave', stopHoverTransition);
 
 animate();
