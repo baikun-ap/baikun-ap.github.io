@@ -17,7 +17,6 @@ export default defineConfig({
       input: {
         landing: resolve(import.meta.dirname, 'index.html'),
         app: resolve(import.meta.dirname, 'app/index.html'),
-        fernhollow: resolve(import.meta.dirname, 'fernhollow/index.html'),
       },
     },
   },

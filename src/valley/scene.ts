@@ -3,19 +3,39 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import './style.css';
 
-const valley = document.querySelector<HTMLElement>('#valley');
-const container = document.querySelector<HTMLElement>('.js-canvas-container');
-const ui = document.querySelector<HTMLElement>('#ui');
-const loader = document.querySelector<HTMLElement>('#loader');
-const sound = document.querySelector<HTMLButtonElement>('#sound');
-const go = document.querySelector<HTMLAnchorElement>('#go');
+/**
+ * The night valley of glowing flowers behind the landing page: an original
+ * three.js scene (procedural hills, point-sprite flowers and leaves, bloom,
+ * a split-RGB grain pass, light rays and dust). The page scroll flies the
+ * camera along a path through the valley; the mouse pushes the flowers aside;
+ * hovering the call to action stops the flight and scatters the petals.
+ */
 
-if (!valley || !container) {
-  throw new Error('Fernhollow scene container is missing.');
+export interface Valley {
+  /** 0 at the top of the page, 1 at the bottom: where the camera is along its flight. */
+  setScroll(p: number): void;
+  /** Ease the flight to a stop and float the petals off (or bring them back). */
+  hover(on: boolean): void;
+  /** Ambient sound on or off; returns the new state. */
+  toggleSound(): boolean;
 }
 
+export function createValley(container: HTMLElement, onReady: () => void): Valley | null {
+  // No WebGL (old device, blocked GPU): the page keeps its painted night sky instead.
+  try {
+    const probe = document.createElement('canvas');
+    if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) return null;
+  } catch { return null; }
+  try {
+    return build(container, onReady);
+  } catch (e) {
+    console.error('[valley]', e);
+    return null;
+  }
+}
+
+function build(container: HTMLElement, onReady: () => void): Valley {
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mobile = window.matchMedia('(max-width: 820px)').matches || ('ontouchstart' in window && window.innerWidth <= 820);
 const TAU = Math.PI * 2;
@@ -354,30 +374,26 @@ const dustMaterial = new THREE.PointsMaterial({
 });
 scene.add(new THREE.Points(dustGeometry, dustMaterial));
 
+
 const mouse = new THREE.Vector2(10, 10);
 const targetMouse = new THREE.Vector2(10, 10);
 let progress = 0.015;
-let scrollVelocity = 0;
-let lastPointerY: number | null = null;
-let idleTime = 0;
+let scrollTarget = 0;
+let drift = 0;
+let speed = 0;
 let introElapsed = 0;
 let ready = false;
 let hoverAmount = 0;
 let hoverTarget = 0;
 let soundEnabled = false;
 
-type AmbientAudio = {
-  context: AudioContext;
-  master: GainNode;
-  lowpass: BiquadFilterNode;
-  oscillators: OscillatorNode[];
-};
-
+type AmbientAudio = { context: AudioContext; master: GainNode; lowpass: BiquadFilterNode };
 let ambientAudio: AmbientAudio | null = null;
 
 const ensureAmbientAudio = (): AmbientAudio => {
   if (ambientAudio) return ambientAudio;
-  const context = new AudioContext();
+  const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const context = new Ctx();
   const master = context.createGain();
   const lowpass = context.createBiquadFilter();
   lowpass.type = 'lowpass';
@@ -386,57 +402,46 @@ const ensureAmbientAudio = (): AmbientAudio => {
   master.gain.value = 0;
   lowpass.connect(master);
   master.connect(context.destination);
-  const oscillators: OscillatorNode[] = [];
-  [55, 82.5, 110].forEach((frequency, index) => {
+  [55, 82.5, 110, 164.8].forEach((frequency, index) => {
     const oscillator = context.createOscillator();
     const voiceGain = context.createGain();
+    const lfo = context.createOscillator();
+    const lfoGain = context.createGain();
     oscillator.type = index === 1 ? 'triangle' : 'sine';
     oscillator.frequency.value = frequency;
     oscillator.detune.value = index * 3 - 3;
-    voiceGain.gain.value = index === 0 ? 0.032 : 0.018;
+    voiceGain.gain.value = index === 0 ? 0.03 : 0.014;
+    // A slow swell on each voice so the drone breathes.
+    lfo.frequency.value = 0.05 + index * 0.031;
+    lfoGain.gain.value = voiceGain.gain.value * 0.6;
+    lfo.connect(lfoGain);
+    lfoGain.connect(voiceGain.gain);
     oscillator.connect(voiceGain);
     voiceGain.connect(lowpass);
     oscillator.start();
-    oscillators.push(oscillator);
+    lfo.start();
   });
-  ambientAudio = { context, master, lowpass, oscillators };
+  ambientAudio = { context, master, lowpass };
   return ambientAudio;
 };
 
-const setAudioHoverState = (muffled: boolean): void => {
+const applyAudio = (): void => {
   if (!ambientAudio) return;
   const now = ambientAudio.context.currentTime;
+  const muffled = hoverTarget > 0.5;
   ambientAudio.lowpass.frequency.cancelScheduledValues(now);
+  ambientAudio.lowpass.frequency.setValueAtTime(ambientAudio.lowpass.frequency.value, now);
   ambientAudio.lowpass.frequency.linearRampToValueAtTime(muffled ? 320 : 1450, now + 0.9);
+  ambientAudio.master.gain.cancelScheduledValues(now);
+  ambientAudio.master.gain.setValueAtTime(ambientAudio.master.gain.value, now);
   ambientAudio.master.gain.linearRampToValueAtTime(soundEnabled ? (muffled ? 0.055 : 0.13) : 0, now + 0.9);
 };
 
-const startHoverTransition = (): void => {
-  hoverTarget = reducedMotion ? 0 : 1;
-  scrollVelocity *= 0.18;
-  setAudioHoverState(true);
-};
-
-const stopHoverTransition = (): void => {
-  hoverTarget = 0;
-  setAudioHoverState(false);
-};
-
-const updateInput = (delta: number, touch = false): void => {
-  scrollVelocity += delta * (touch ? 20 : 1) * 0.00022;
-  scrollVelocity = THREE.MathUtils.clamp(scrollVelocity, -0.018, 0.018);
-  idleTime = 0;
-};
-
-window.addEventListener('wheel', (event) => updateInput(event.deltaY));
 window.addEventListener('pointermove', (event) => {
+  if (event.pointerType !== 'mouse') return;
   targetMouse.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
-  if (lastPointerY !== null && event.pointerType !== 'mouse') updateInput(lastPointerY - event.clientY, true);
-  lastPointerY = event.pointerType === 'mouse' ? null : event.clientY;
-});
-window.addEventListener('pointerup', () => {
-  lastPointerY = null;
-});
+}, { passive: true });
+document.addEventListener('pointerleave', () => targetMouse.set(10, 10));
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -453,22 +458,32 @@ const setUniforms = (time: number): void => {
   }
   flowers.material.uniforms.uScatter.value = hoverAmount;
   atmospherePass.uniforms.uTime.value = time;
-  atmospherePass.uniforms.uSpeed.value = Math.min(1, Math.abs(scrollVelocity) * 55);
-  atmospherePass.uniforms.uVignette.value = 0.22 + Math.min(0.32, Math.abs(scrollVelocity) * 16);
+  atmospherePass.uniforms.uSpeed.value = Math.min(1, speed * 55);
+  atmospherePass.uniforms.uVignette.value = 0.22 + Math.min(0.32, speed * 16);
   bloomPass.strength = (mobile ? 0.12 : 0.18) + hoverAmount * 0.04;
 };
 
 const clock = new THREE.Clock();
-const animate = (): void => {
+let running = true;
+document.addEventListener('visibilitychange', () => {
+  const wasRunning = running;
+  running = !document.hidden;
+  if (running && !wasRunning) { clock.getDelta(); requestAnimationFrame(frame); }
+});
+
+function frame(): void {
+  if (!running) return;
   const delta = Math.min(clock.getDelta(), 0.05);
   const time = clock.elapsedTime;
   introElapsed += delta;
-  idleTime += delta;
   hoverAmount = THREE.MathUtils.damp(hoverAmount, hoverTarget, 3.6, delta);
 
-  if (!reducedMotion && hoverAmount < 0.02 && Math.abs(scrollVelocity) < 0.00002 && idleTime > 0.8) progress += delta * 0.0026;
-  progress = (progress + scrollVelocity * (1 - hoverAmount) + 1) % 1;
-  scrollVelocity *= Math.pow(0.055, delta);
+  // The page scroll sets where the camera is; when idle it keeps drifting forward a little.
+  if (!reducedMotion) drift += delta * 0.0026 * (1 - hoverAmount);
+  const goal = 0.015 + scrollTarget * 0.82 + drift;
+  const before = progress;
+  progress = THREE.MathUtils.damp(progress, goal, 2.4 * (1 - hoverAmount * 0.85), delta);
+  speed = THREE.MathUtils.damp(speed, Math.abs(progress - before), 6, delta);
   mouse.lerp(targetMouse, 1 - Math.pow(0.0001, delta));
 
   const dustAttribute = dustGeometry.getAttribute('position') as THREE.BufferAttribute;
@@ -486,37 +501,34 @@ const animate = (): void => {
   });
 
   const introAmount = Math.min(1, introElapsed / (reducedMotion ? 0.25 : 1.15));
-  const flightT = (progress + introAmount * 0.06) % 1;
+  const flightT = (((progress + introAmount * 0.06) % 1) + 1) % 1;
   const pathPosition = path.getPointAt(flightT);
   const lookAhead = path.getPointAt((flightT + 0.018) % 1);
   const cameraHeight = (mobile ? 1.7 : 2.8) + Math.sin(time * 0.22) * 0.16;
   camera.position.lerp(new THREE.Vector3(pathPosition.x, pathPosition.y + cameraHeight, pathPosition.z), 0.12);
-  camera.lookAt(lookAhead.x + mouse.x * 1.2, lookAhead.y + (mobile ? -5.5 : 0.6) + mouse.y * 0.6, lookAhead.z);
-  camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, -mouse.x * 0.025, 0.08);
+  const mx = mouse.x > 5 ? 0 : mouse.x, my = mouse.y > 5 ? 0 : mouse.y;
+  camera.lookAt(lookAhead.x + mx * 1.2, lookAhead.y + (mobile ? -5.5 : 0.6) + my * 0.6, lookAhead.z);
+  camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, -mx * 0.025, 0.08);
 
   setUniforms(time);
   composer.render();
 
-  if (!ready && introElapsed > (reducedMotion ? 0.04 : 0.1)) {
-    ready = true;
-    loader?.classList.add('gone');
-    window.setTimeout(() => ui?.classList.add('on'), reducedMotion ? 0 : 350);
-  }
-  window.requestAnimationFrame(animate);
+  if (!ready && introElapsed > 0.1) { ready = true; onReady(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+return {
+  setScroll(p: number) { scrollTarget = Math.min(1, Math.max(0, p)); },
+  hover(on: boolean) { hoverTarget = on && !reducedMotion ? 1 : 0; applyAudio(); },
+  toggleSound() {
+    try {
+      const audio = ensureAmbientAudio();
+      if (audio.context.state === 'suspended') void audio.context.resume();
+      soundEnabled = !soundEnabled;
+      applyAudio();
+    } catch { soundEnabled = false; }
+    return soundEnabled;
+  },
 };
-
-sound?.addEventListener('click', () => {
-  const audio = ensureAmbientAudio();
-  if (audio.context.state === 'suspended') void audio.context.resume();
-  soundEnabled = !soundEnabled;
-  const now = audio.context.currentTime;
-  audio.master.gain.cancelScheduledValues(now);
-  audio.master.gain.linearRampToValueAtTime(soundEnabled ? (hoverAmount > 0.5 ? 0.055 : 0.13) : 0, now + 0.9);
-  sound.setAttribute('aria-pressed', String(soundEnabled));
-  sound.setAttribute('aria-label', soundEnabled ? 'Turn ambient sound off' : 'Turn ambient sound on');
-});
-
-go?.addEventListener('pointerenter', startHoverTransition);
-go?.addEventListener('pointerleave', stopHoverTransition);
-
-animate();
+}
