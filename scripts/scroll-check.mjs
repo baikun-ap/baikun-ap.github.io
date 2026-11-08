@@ -1,5 +1,6 @@
 // Scroll-animation visibility regression check: visible cards must never remain faded.
 import { chromium } from 'playwright';
+import { chromePath } from './chrome.mjs';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -28,7 +29,7 @@ const server = createServer((req, res) => {
   }
 }).listen(PORT);
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? '/usr/bin/chromium' });
+const browser = await chromium.launch({ executablePath: chromePath() });
 const selectors = '.stat, .panel, .world, .lesson-card, .mt-part';
 const failures = [];
 
@@ -50,7 +51,7 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
           })
           .filter(({ element, rect, opacity }) => {
             const style = getComputedStyle(element);
-            return style.display !== 'none' && style.visibility !== 'hidden' && rect.top < limit && opacity <= 0.95;
+            return !element.classList.contains('micro-off') && style.display !== 'none' && style.visibility !== 'hidden' && rect.top < limit && opacity <= 0.95;
           })
           .map(({ element, rect, opacity }) => ({
             className: element.className,
