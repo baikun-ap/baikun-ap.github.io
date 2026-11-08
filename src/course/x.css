@@ -733,7 +733,7 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 /* ---------- microeconomics ---------- */
 @media (min-width: 900px) { .micro .mt-parts { grid-template-columns: repeat(2, 1fr); } }
 .micro .mt-zh { font-family: var(--ui); font-weight: 600; }
-.micro-off { opacity: .6; }
+.micro-off { opacity: 1; }
 .micro-bar { margin-top: 10px; max-width: 220px; }
 .micro-empty h3 { margin: 0 0 6px; }
 .micro-q { text-align: left; }

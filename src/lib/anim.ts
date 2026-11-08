@@ -18,22 +18,29 @@ function scrollRoot(main: HTMLElement): ScrollRoot {
   return ownsScroll ? main : document.body;
 }
 
+function hasScroll(container: ScrollRoot, main: HTMLElement) {
+  return container === main
+    ? main.scrollHeight > main.clientHeight
+    : document.documentElement.scrollHeight > window.innerHeight;
+}
+
 function scrollObserver(target: Element, container: ScrollRoot) {
   return onScroll({
     target,
-    enter: 'bottom 88%',
-    leave: 'top 12%',
+    // Scrub only through the short reveal band from the viewport edge to 80vh.
+    // Once the element's top is above 80% of the viewport, progress is 1.
+    enter: { target: 'top', container: 'end' },
+    leave: { target: 'top', container: '80%' },
     sync: true,
     container,
   });
 }
 
-function scrollReveal(target: Element, container: ScrollRoot, index: number, y = 28) {
+function scrollReveal(target: Element, container: ScrollRoot, y = 28) {
   return animate(target, {
     opacity: [0, 1],
     translateY: [y, 0],
-    delay: index * 70,
-    duration: 720,
+    duration: 360,
     ease: 'outCubic',
     autoplay: scrollObserver(target, container),
   });
@@ -54,9 +61,9 @@ export function enterPage(main: Element | null) {
 }
 
 /**
- * Bind the app's existing cards to scroll progress. Anime's sync observer
- * makes the same motion scrub forward while scrolling down and reverse while
- * scrolling up, without adding layout-affecting styles or per-card listeners.
+ * Bind the app's existing cards to a short scroll reveal. Elements already
+ * visible on route entry are left at their natural opacity; only content below
+ * the viewport is scrubbed, so a non-scrollable page can never show blank cards.
  */
 export function installScrollMotion(main: HTMLElement | null): (() => void) | void {
   if (!main || reduced()) return;
@@ -65,10 +72,18 @@ export function installScrollMotion(main: HTMLElement | null): (() => void) | vo
   const animations: { revert: () => unknown }[] = [];
 
   const bind = (selector: string, y = 28) => {
-    main.querySelectorAll(selector).forEach((target, index) => {
+    const scrollable = hasScroll(container, main);
+    main.querySelectorAll(selector).forEach((target) => {
       if (seen.has(target)) return;
       seen.add(target);
-      animations.push(scrollReveal(target, container, index, y));
+      const rect = target.getBoundingClientRect();
+      const visibleNow = rect.bottom > 0 && rect.top < window.innerHeight;
+      // No scroll, or already visible: never initialize this target at opacity 0.
+      if (!scrollable || visibleNow) {
+        target.setAttribute('data-scroll-ready', 'true');
+        return;
+      }
+      animations.push(scrollReveal(target, container, y));
     });
   };
 
