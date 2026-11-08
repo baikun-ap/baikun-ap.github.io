@@ -72,9 +72,13 @@ function normalise(raw: unknown): CourseState {
   return { ...base, ...r, settings: { ...base.settings, ...(r.settings ?? {}) } } as CourseState;
 }
 
+/** Safari's IndexedDB can hang without ever answering; never wait on it for long. */
+const withTimeout = <T,>(p: Promise<T>, ms: number) =>
+  Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+
 export async function loadCourse(): Promise<CourseState> {
   try {
-    const fromDb = await get(KEY);
+    const fromDb = await withTimeout(get(KEY), 1500);
     if (fromDb) return normalise(fromDb);
   } catch { /* private mode or evicted: fall through to the mirror */ }
   try {
