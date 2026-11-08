@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { enterPage } from './lib/anim';
+import { enterPage, installScrollMotion } from './lib/anim';
 import { useCourse, dueCards } from './course/store';
 import { useCloud, cloudConfigured } from './course/cloud';
 import { useGithubSync } from './course/ghsync';
@@ -50,7 +50,12 @@ export default function App() {
   useEffect(() => setMore(false), [route]);
   // Each page rises in as a stagger when it opens.
   const routeKey = route.join('/');
-  useLayoutEffect(() => { if (state) enterPage(document.querySelector('.x-main')); }, [routeKey, !!state]); // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    if (!state) return;
+    const main = document.querySelector<HTMLElement>('.x-main');
+    enterPage(main);
+    return installScrollMotion(main);
+  }, [routeKey, !!state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.title = t('bai.kun (baikun) — курс китайского', 'bai.kun (baikun) — Chinese course'); }, [lang]);
 
   // Light or dark: the learner's choice, or the system's when set to auto.
