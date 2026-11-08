@@ -132,6 +132,20 @@ nav a:not(.pill):hover {
   align-items: center;
   text-align: center;
   transform: translateY(-46%);
+  isolation: isolate;
+}
+
+.hero::before {
+  position: absolute;
+  z-index: -1;
+  top: -34%;
+  right: -18%;
+  bottom: -26%;
+  left: -18%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.44) 48%, rgba(0, 0, 0, 0) 78%);
+  content: '';
+  pointer-events: none;
 }
 
 h1 {

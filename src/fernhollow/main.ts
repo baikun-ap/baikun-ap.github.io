@@ -17,7 +17,7 @@ if (!valley || !container) {
 }
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const mobile = window.matchMedia('(max-width: 820px)').matches;
+const mobile = window.matchMedia('(max-width: 820px)').matches || ('ontouchstart' in window && window.innerWidth <= 820);
 const TAU = Math.PI * 2;
 const FLOWER_COUNT = mobile ? 760 : 2200;
 const LEAF_COUNT = mobile ? 900 : 3600;
@@ -30,7 +30,7 @@ const terrainHeight = (x: number, z: number): number => {
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020302);
-scene.fog = new THREE.FogExp2(0x020302, 0.008);
+scene.fog = new THREE.FogExp2(0x020302, mobile ? 0.0045 : 0.008);
 
 const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 180);
 camera.position.set(0, 2, 12);
@@ -104,7 +104,7 @@ moonLight.position.set(-18, 32, 22);
 scene.add(moonLight);
 scene.add(new THREE.HemisphereLight(0x263d35, 0x020201, 0.38));
 
-const terrainGeometry = new THREE.PlaneGeometry(150, 220, mobile ? 54 : 86, mobile ? 72 : 112);
+const terrainGeometry = new THREE.PlaneGeometry(280, 420, mobile ? 64 : 96, mobile ? 96 : 160);
 terrainGeometry.rotateX(-Math.PI / 2);
 const terrainPositions = terrainGeometry.getAttribute('position');
 for (let i = 0; i < terrainPositions.count; i += 1) {
@@ -116,7 +116,7 @@ terrainPositions.needsUpdate = true;
 terrainGeometry.computeVertexNormals();
 const terrain = new THREE.Mesh(
   terrainGeometry,
-  new THREE.MeshStandardMaterial({ color: 0x0d1710, emissive: 0x020704, emissiveIntensity: 0.16, roughness: 1, metalness: 0, flatShading: true }),
+  new THREE.MeshStandardMaterial({ color: 0x203a27, emissive: 0x0a1a0e, emissiveIntensity: 0.36, roughness: 1, metalness: 0, flatShading: true }),
 );
 terrain.position.z = -42;
 scene.add(terrain);
@@ -140,7 +140,8 @@ const random = (seed: number): number => {
 
 const sampleFloraPosition = (index: number, count: number, spread: number): THREE.Vector3 => {
   const seed = index * 17.31 + count * 0.013;
-  const t = random(seed) * 0.999;
+  const distribution = random(seed);
+  const t = (mobile && distribution < 0.68 ? distribution * 0.28 : distribution) * 0.999;
   const centre = path.getPointAt(t);
   const tangent = path.getTangentAt(t).normalize();
   const side = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
@@ -162,6 +163,7 @@ const floraVertex = `
   uniform float uTime;
   uniform float uGrowthFar;
   uniform float uScatter;
+  uniform float uMaxPointSize;
   attribute float aSize;
   attribute float aPhase;
   attribute float aHue;
@@ -169,6 +171,7 @@ const floraVertex = `
   varying float vGlow;
   varying float vHue;
   varying float vPhase;
+  varying float vVisibility;
   void main() {
     vec3 scatteredPosition = position + aScatter * uScatter;
     vec4 modelViewPosition = modelViewMatrix * vec4(scatteredPosition, 1.0);
@@ -187,7 +190,8 @@ const floraVertex = `
       clipPosition.xy += normalize(cursorDelta) * influence * 0.13 * clipPosition.w;
     }
     gl_Position = clipPosition;
-    gl_PointSize = max(1.0, aSize * (0.5 + growth * 1.1) * (260.0 / -modelViewPosition.z));
+    vVisibility = smoothstep(1.5, 3.5, distanceToCamera);
+    gl_PointSize = clamp(aSize * (0.5 + growth * 1.1) * (260.0 / -modelViewPosition.z), 1.0, uMaxPointSize);
     vGlow = 0.35 + growth * 0.65 + influence * 0.65;
     vHue = aHue;
     vPhase = aPhase;
@@ -199,6 +203,7 @@ const flowerFragment = `
   varying float vGlow;
   varying float vHue;
   varying float vPhase;
+  varying float vVisibility;
   vec3 palette(float h) {
     vec3 cream = vec3(0.96, 0.83, 0.61);
     vec3 pink = vec3(0.95, 0.48, 0.56);
@@ -212,13 +217,15 @@ const flowerFragment = `
   void main() {
     vec2 p = gl_PointCoord - 0.5;
     float radius = length(p);
-    float angle = atan(p.y, p.x);
-    float petalShape = pow(0.5 + 0.5 * cos(angle * 6.0 + vPhase), 1.65);
-    float petalEdge = mix(0.25, 0.43, petalShape);
-    float petals = 1.0 - smoothstep(petalEdge, petalEdge + 0.035, radius);
-    float softCircle = 1.0 - smoothstep(0.44, 0.5, radius);
+    float petals = 0.0;
+    for (int i = 0; i < 6; i++) {
+      float petalAngle = float(i) * 1.0471976 + vPhase;
+      vec2 petalCentre = vec2(cos(petalAngle), sin(petalAngle)) * 0.19;
+      float petal = 1.0 - smoothstep(0.145, 0.19, length(p - petalCentre));
+      petals = max(petals, petal);
+    }
     float core = 1.0 - smoothstep(0.0, 0.14, radius);
-    float alpha = petals * softCircle;
+    float alpha = petals * vVisibility;
     if (alpha < 0.02) discard;
     vec3 color = mix(palette(vHue), vec3(1.0, 0.92, 0.68), core * 0.9);
     float shimmer = 0.9 + 0.1 * sin(uTime * 1.8 + vPhase);
@@ -257,7 +264,7 @@ const createFlora = (count: number, kind: 'flower' | 'leaf'): FloraData => {
     positions[i * 3 + 1] = point.y;
     positions[i * 3 + 2] = point.z;
     const seed = i * 5.21 + (kind === 'flower' ? 0 : 2000);
-    sizes[i] = kind === 'flower' ? 3.2 + random(seed) * 5.5 : 1.1 + random(seed) * 2.1;
+    sizes[i] = kind === 'flower' ? 1.8 + random(seed) * 2.8 : 0.9 + random(seed) * 1.6;
     phases[i] = random(seed + 1.1) * TAU;
     hues[i] = random(seed + 3.7);
     const scatterLength = kind === 'flower' ? 7 + random(seed + 5.4) * 16 : 0;
@@ -279,6 +286,7 @@ const createFlora = (count: number, kind: 'flower' | 'leaf'): FloraData => {
       uTime: { value: 0 },
       uGrowthFar: { value: kind === 'leaf' ? 1 : 0 },
       uScatter: { value: 0 },
+      uMaxPointSize: { value: kind === 'flower' ? (mobile ? 28 : 40) : (mobile ? 18 : 26) },
     },
     vertexShader: floraVertex,
     fragmentShader: kind === 'flower' ? flowerFragment : leafFragment,
@@ -483,7 +491,7 @@ const animate = (): void => {
   const lookAhead = path.getPointAt((flightT + 0.018) % 1);
   const cameraHeight = (mobile ? 1.7 : 2.8) + Math.sin(time * 0.22) * 0.16;
   camera.position.lerp(new THREE.Vector3(pathPosition.x, pathPosition.y + cameraHeight, pathPosition.z), 0.12);
-  camera.lookAt(lookAhead.x + mouse.x * 1.2, lookAhead.y + (mobile ? 0.25 : 0.6) + mouse.y * 0.6, lookAhead.z);
+  camera.lookAt(lookAhead.x + mouse.x * 1.2, lookAhead.y + (mobile ? -5.5 : 0.6) + mouse.y * 0.6, lookAhead.z);
   camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, -mouse.x * 0.025, 0.08);
 
   setUniforms(time);
