@@ -10,6 +10,7 @@ import { Cards, Course, Dashboard, Grammar, Hanzi, Pinyin, Settings } from './co
 import Midterm from './course/Midterm';
 import WritePage from './course/Write';
 import PartsPage from './course/Notes';
+import Guard from './components/Guard';
 import Micro from './course/Micro';
 import { setLang, t, useLang } from './i18n';
 
@@ -53,8 +54,9 @@ export default function App() {
   useLayoutEffect(() => {
     if (!state) return;
     const main = document.querySelector<HTMLElement>('.x-main');
-    enterPage(main);
-    return installScrollMotion(main);
+    // Motion is decoration: if a browser trips over it, the page still shows.
+    try { enterPage(main); } catch (e) { console.error(e); }
+    try { return installScrollMotion(main) ?? undefined; } catch (e) { console.error(e); return undefined; }
   }, [routeKey, !!state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.title = t('bai.kun (baikun) — курс китайского', 'bai.kun (baikun) — Chinese course'); }, [lang]);
 
@@ -125,7 +127,7 @@ export default function App() {
       </header>
 
       <main className="x-main">
-        {state ? <CourseCtx.Provider value={{ state, actions, cloud, gh }}>{page}</CourseCtx.Provider> : <div className="page"><div className="sk-block" /></div>}
+        {state ? <CourseCtx.Provider value={{ state, actions, cloud, gh }}><Guard resetKey={routeKey}>{page}</Guard></CourseCtx.Provider> : <div className="page"><div className="sk-block" /></div>}
       </main>
 
       <nav className="x-tabs" aria-label={t('Разделы', 'Sections')}>

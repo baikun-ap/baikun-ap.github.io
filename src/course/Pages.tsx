@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { countUp } from '../lib/anim';
+import Guard from '../components/Guard';
 import { ALL_GRAMMAR, BOOKS, LESSONS, STEPS } from './data';
 import { GrammarCard } from './Lesson';
 import { markTone } from './exercises';
@@ -59,7 +60,7 @@ function Num({ v }: { v: number }) {
     if (!ref.current) return;
     if (seen.current) { ref.current.textContent = String(v); return; }
     seen.current = true;
-    countUp(ref.current, v);
+    try { countUp(ref.current, v); } catch { ref.current.textContent = String(v); }
   }, [v]);
   return <span ref={ref}>{v}</span>;
 }
@@ -96,7 +97,7 @@ export function Dashboard() {
       </section>
 
       <Suspense fallback={<div className="panel muted small">{t('Загружаю активность…', 'Loading activity…')}</div>}>
-        <StudyActivity />
+        <Guard quiet><StudyActivity /></Guard>
       </Suspense>
 
       <a className="panel mt-pdf dash-micro" href="#/micro">

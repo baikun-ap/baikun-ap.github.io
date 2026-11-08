@@ -83,7 +83,14 @@ export function installScrollMotion(main: HTMLElement | null): (() => void) | vo
         target.setAttribute('data-scroll-ready', 'true');
         return;
       }
-      animations.push(scrollReveal(target, container, y));
+      try {
+        animations.push(scrollReveal(target, container, y));
+      } catch (e) {
+        // A browser that can't scrub on scroll gets the card as it is, never a hidden one.
+        (target as HTMLElement).style.opacity = '';
+        (target as HTMLElement).style.transform = '';
+        console.error(e);
+      }
     });
   };
 
@@ -105,8 +112,10 @@ export function installScrollMotion(main: HTMLElement | null): (() => void) | vo
   // React inserts them instead of making the first paint wait for chart code.
   const mutationObserver = new MutationObserver(() => {
     if (main.querySelector('.dash')) {
-      bind('.dash .activity > .panel:first-child svg', 18);
-      bind('.dash .bk-chart', 32);
+      try {
+        bind('.dash .activity > .panel:first-child svg', 18);
+        bind('.dash .bk-chart', 32);
+      } catch (e) { console.error(e); }
     }
   });
   mutationObserver.observe(main, { childList: true, subtree: true });
@@ -120,7 +129,7 @@ export function installScrollMotion(main: HTMLElement | null): (() => void) | vo
 /** A press: a quick dip and a springy return. */
 export function press(el: Element) {
   if (reduced()) return;
-  animate(el, { scale: [{ to: 0.95, duration: 90, ease: 'outQuad' }, { to: 1, duration: 420, ease: 'outElastic(1, .45)' }] });
+  try { animate(el, { scale: [{ to: 0.95, duration: 90, ease: 'outQuad' }, { to: 1, duration: 420, ease: 'outElastic(1, .45)' }] }); } catch { /* decoration only */ }
 }
 
 /** Counts a number up from zero inside an element. */
@@ -147,7 +156,7 @@ export function installMotion(root: Document = document) {
     for (const m of list) for (const n of m.addedNodes) {
       if (!(n instanceof Element)) continue;
       const v = n.matches('.verdict.ok') ? n : n.querySelector('.verdict.ok');
-      if (v) celebrate(v);
+      if (v) try { celebrate(v); } catch { /* decoration only */ }
     }
   }).observe(root.body, { childList: true, subtree: true });
 }
