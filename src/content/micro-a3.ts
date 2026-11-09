@@ -1,0 +1,148 @@
+import type { MicroQ } from './micro';
+
+/** Assignment Three — Chapter 3, Interdependence and the Gains from Trade (Mankiw). */
+const TABLE = 'Output of one worker per month:\nAustralia — food 20, electrical appliances 5\nSouth Korea — food 8, electrical appliances 4\n\n';
+const TABLE_RU = 'Выпуск одного работника за месяц: Австралия — еда 20, техника 5; Южная Корея — еда 8, техника 4. ';
+
+export const A3: MicroQ[] = [
+  {
+    id: 'a3-1', q: 'In an hour, David can wash 2 cars or mow 1 lawn, and Ron can wash 3 cars or mow 1 lawn. Who has the absolute advantage in car washing, and who has the absolute advantage in lawn mowing?',
+    ru: 'За час Дэвид моет 2 машины или стрижёт 1 газон, Рон — 3 машины или 1 газон. У кого абсолютное преимущество в мойке и в стрижке?',
+    options: ['David in washing, Ron in mowing.', 'Ron in washing, David in mowing.', 'David in washing, neither in mowing.', 'Ron in washing, neither in mowing.'],
+    answer: 3,
+    explain: 'Absolute advantage — кто больше производит за то же время. Мойка: Рон 3 > Дэвид 2. Газон: оба по 1, значит ни у кого.',
+  },
+  {
+    id: 'a3-2', q: 'Once again, in an hour, David can wash 2 cars or mow 1 lawn, and Ron can wash 3 cars or mow 1 lawn. Who has the comparative advantage in car washing, and who has the comparative advantage in lawn mowing?',
+    ru: 'Те же Дэвид и Рон. У кого сравнительное преимущество в мойке и в стрижке?',
+    options: ['David in washing, Ron in mowing.', 'Ron in washing, David in mowing.', 'David in washing, neither in mowing.', 'Ron in washing, neither in mowing.'],
+    answer: 1,
+    explain: 'Считаем opportunity cost. 1 газон стоит Дэвиду 2 машины, Рону — 3 машины, значит газон дешевле у Дэвида. 1 машина стоит Рону 1/3 газона, Дэвиду 1/2 — мойка дешевле у Рона.',
+  },
+  {
+    id: 'a3-3', q: 'When two individuals produce efficiently and then make a mutually beneficial trade based on comparative advantage,',
+    ru: 'Когда двое производят эффективно и выгодно торгуют по сравнительному преимуществу…',
+    options: ['they both obtain consumption outside their production possibilities frontier.', 'they both obtain consumption inside their production possibilities frontier.', 'one individual consumes inside her production possibilities frontier, while the other consumes outside hers.', 'each individual consumes a point on her own production possibilities frontier.'],
+    answer: 0,
+    explain: 'В этом смысл торговли: каждый потребляет больше, чем мог бы сам. Это точка за пределами своей PPF.',
+  },
+  {
+    id: 'a3-4', q: 'Which goods will a nation typically import?',
+    ru: 'Какие товары страна обычно импортирует?',
+    options: ['those goods in which the nation has an absolute advantage', 'those goods in which the nation has a comparative advantage', 'those goods in which other nations have an absolute advantage', 'those goods in which other nations have a comparative advantage'],
+    answer: 3,
+    explain: 'Страна экспортирует то, в чём у неё comparative advantage, и импортирует то, что дешевле (по opportunity cost) производят другие.',
+  },
+  {
+    id: 'a3-5', q: 'Suppose that in the United States, producing an aircraft takes 10,000 hours of labor and producing a shirt takes 2 hours of labor. In China, producing an aircraft takes 40,000 hours of labor and producing a shirt takes 4 hours of labor. What will these nations trade?',
+    ru: 'В США самолёт — 10 000 часов, рубашка — 2 часа. В Китае самолёт — 40 000 часов, рубашка — 4 часа. Чем они будут торговать?',
+    options: ['China will export aircraft, and the United States will export shirts.', 'China will export shirts, and the United States will export aircraft.', 'Both nations will export shirts.', 'There are no gains from trade in this situation.'],
+    answer: 1,
+    explain: '1 самолёт стоит США 10 000 / 2 = 5 000 рубашек, Китаю 40 000 / 4 = 10 000 рубашек. Самолёты дешевле в США, рубашки — в Китае. Китай экспортирует рубашки, США — самолёты.',
+  },
+  {
+    id: 'a3-6', q: 'Mark can cook dinner in 30 minutes and wash the laundry in 20 minutes. His roommate takes half as long to do each task. How should the roommates allocate the work?',
+    ru: 'Марк готовит ужин за 30 минут и стирает за 20. Сосед делает каждое дело вдвое быстрее. Как поделить работу?',
+    options: ['Mark should do more of the cooking based on his comparative advantage.', 'Mark should do more of the washing based on his comparative advantage.', 'Mark should do more of the washing based on his absolute advantage.', 'There are no gains from trade in this situation.'],
+    answer: 3,
+    explain: 'Сосед: 15 и 10 минут. У обоих ужин стоит 1,5 стирки — opportunity costs одинаковые, comparative advantage нет ни у кого, поэтому выгоды от обмена нет.',
+  },
+  {
+    id: 'a3-7', q: 'If a country has a comparative advantage in producing an item, then ______',
+    ru: 'Если у страны сравнительное преимущество в товаре, то…',
+    options: ['It can produce the item at a lower opportunity cost than its trading partners', 'It can produce the item with less resources than its trading partners', 'It can benefit by restricting the import of the item', 'It can specialize in producing this item and exporting it', 'None of the above'],
+    answer: 0,
+    explain: 'Comparative advantage по определению — более низкая opportunity cost. Вариант D (специализироваться и экспортировать) — тоже верное следствие. Если в задании засчитывают D, уточни у преподавателя: по учебнику главный ответ — A.',
+  },
+  {
+    id: 'a3-8', q: 'If a country has a comparative advantage in producing an item, then ______',
+    ru: 'Если у страны сравнительное преимущество в товаре, то…',
+    options: ['It can produce the item at a lower opportunity cost than its trading partners', 'It can produce the item with less resources than its trading partners', 'It can benefit by restricting the import of the item', 'It is the only country capable of producing the item', 'None of the above'],
+    answer: 0,
+    explain: 'Lower opportunity cost — это и есть comparative advantage. «Меньше ресурсов» (B) — это absolute advantage.',
+  },
+  {
+    id: 'a3-9', q: 'Which of the following statements about trade is correct?',
+    ru: 'Какое утверждение о торговле верно?',
+    options: ['Unrestricted international trade would benefit everyone in a country equally.', 'Those who are proficient in all activities cannot benefit from trade', 'Trade can benefit everyone in society, as it allows people to specialize in activities in which they have an absolute advantage.', 'Trade can benefit everyone in society because it allows people to specialize in activities in which they have a comparative advantage.'],
+    answer: 3,
+    explain: 'Выгода от торговли идёт от comparative, а не absolute advantage. Даже тот, кто лучше во всём, выигрывает, специализируясь на своём сравнительном преимуществе.',
+  },
+  {
+    id: 'a3-10', q: 'According to the principle of comparative advantage, ______',
+    ru: 'По принципу сравнительного преимущества…',
+    options: ['Countries that have a comparative advantage in the production of every item do not need specialization', 'States should specialize in the production of items they like to consume', 'States should specialize in producing items that use fewer resources in production than their trading partners', 'States should specialize in producing items that have a lower opportunity cost than their trading partners'],
+    answer: 3,
+    explain: 'Специализируйся там, где твоя opportunity cost ниже. Вариант C — это absolute advantage. Сравнительного преимущества во всём сразу не бывает, поэтому A невозможно.',
+  },
+  {
+    id: 'a3-11', q: 'Suppose a worker in a country can produce 4 watches or 12 rings per hour. If there is no trade, ______',
+    ru: 'За час работник делает 4 watches (наручных часов) или 12 rings (колец). Без торговли…',
+    options: ['The domestic price of 1 ring is 3 watches', 'The domestic price of 1 ring is 1/3 of a watch', 'The domestic price of 1 ring is 4 watches', 'The domestic price of 1 ring is 1/4 watch', 'The domestic price of 1 ring is 12 watches'],
+    answer: 1,
+    explain: '12 колец = 4 watches, значит 1 кольцо = 4/12 = 1/3 watch. Без торговли цена товара = его opportunity cost.',
+  },
+  {
+    id: 'a3-12', q: 'Suppose a worker in a country can produce 4 watches or 12 rings per hour. If there is no trade, ______',
+    ru: 'Тот же работник: 4 watches или 12 rings в час. Без торговли…',
+    options: ['The opportunity cost of 1 watch is 3 rings', 'The opportunity cost of 1 watch is 1/3 ring', 'The opportunity cost of 1 watch is 4 rings', 'The opportunity cost of 1 watch is 1/4 ring', 'The opportunity cost of 1 watch is 12 rings'],
+    answer: 0,
+    explain: '4 watches = 12 колец, значит 1 watch = 12/4 = 3 кольца. Это обратная величина к вопросу 11.',
+  },
+  {
+    id: 'a3-13', q: TABLE + 'Which of the following statements about absolute advantage is correct?',
+    ru: TABLE_RU + 'Что верно про абсолютное преимущество?',
+    options: ['Australia has an absolute advantage in food production, while South Korea has an absolute advantage in the production of electrical appliances.', 'South Korea has an absolute advantage in the production of food, while Australia has an absolute advantage in the production of electrical appliances.', 'Australia has an absolute advantage in the production of food and electrical appliances.', 'South Korea has an absolute advantage in the production of food and electrical appliances.'],
+    answer: 2,
+    explain: 'Австралийский работник производит больше обоих товаров: еды 20 > 8, техники 5 > 4. Значит, absolute advantage у Австралии в обоих.',
+  },
+  {
+    id: 'a3-14', q: TABLE + 'The opportunity cost of producing 1 unit of electrical appliances in Australia is ______',
+    ru: TABLE_RU + 'Альтернативные издержки 1 единицы техники в Австралии…',
+    options: ['5 units of food', '1/5 unit of food', '4 units of food', '1/4 unit of food'],
+    answer: 2,
+    explain: '5 техники = 20 еды, значит 1 техника = 20/5 = 4 еды.',
+  },
+  {
+    id: 'a3-15', q: TABLE + 'The opportunity cost of producing 1 unit of electrical appliances in South Korea is ______',
+    ru: TABLE_RU + 'Альтернативные издержки 1 единицы техники в Корее…',
+    options: ['2 units of food', '1/2 unit of food', '4 units of food', '1/4 unit of food'],
+    answer: 0,
+    explain: '4 техники = 8 еды, значит 1 техника = 8/4 = 2 еды.',
+  },
+  {
+    id: 'a3-16', q: TABLE + 'The opportunity cost of producing 1 unit of food in Australia is ______',
+    ru: TABLE_RU + 'Альтернативные издержки 1 единицы еды в Австралии…',
+    options: ['5 units of electrical appliances', '1/5 unit of electrical appliances', '4 units of electrical appliances', '1/4 unit of electrical appliances'],
+    answer: 3,
+    explain: '20 еды = 5 техники, значит 1 еда = 5/20 = 1/4 техники. Это обратная величина к вопросу 14.',
+  },
+  {
+    id: 'a3-17', q: TABLE + 'The opportunity cost of producing 1 unit of food in South Korea is ______',
+    ru: TABLE_RU + 'Альтернативные издержки 1 единицы еды в Корее…',
+    options: ['2 units of electrical appliances', '1/2 unit of electrical appliances', '4 units of electrical appliances', '1/4 unit of electrical appliances'],
+    answer: 1,
+    explain: '8 еды = 4 техники, значит 1 еда = 4/8 = 1/2 техники.',
+  },
+  {
+    id: 'a3-18', q: TABLE + 'Which of the following statements about comparative advantage is correct?',
+    ru: TABLE_RU + 'Что верно про сравнительное преимущество?',
+    options: ['Australia has a comparative advantage in food production, while South Korea has a comparative advantage in the production of electrical appliances.', 'South Korea has a comparative advantage in the production of food, while Australia has a comparative advantage in the production of electrical appliances.', 'Australia has a comparative advantage in the production of food and electrical appliances.', 'South Korea has a comparative advantage in the production of food and electrical appliances.', 'No country has a comparative advantage.'],
+    answer: 0,
+    explain: 'Еда: Австралия 1/4 техники < Корея 1/2, значит еда дешевле в Австралии. Техника: Корея 2 еды < Австралия 4, значит техника дешевле в Корее. Сравнительное преимущество во всём сразу невозможно.',
+  },
+  {
+    id: 'a3-19', q: TABLE + 'South Korea should ______',
+    ru: TABLE_RU + 'Южной Корее следует…',
+    options: ['Specialize in food production, exporting food, and importing electrical appliances', 'Specialize in electrical appliance production, exporting electrical appliances, and importing food', 'Produce both items, because no country has a comparative advantage', 'Neither good is produced because it has an absolute disadvantage in the production of both items'],
+    answer: 1,
+    explain: 'У Кореи comparative advantage в технике (вопрос 18): она специализируется на технике, экспортирует её и импортирует еду. Absolute disadvantage не мешает выгодно торговать.',
+  },
+  {
+    id: 'a3-20', q: TABLE + 'The price of electrical appliances can be expressed in food units. What is the price range for electrical appliances that allows both countries to benefit from trade?',
+    ru: TABLE_RU + 'Цена техники в единицах еды: в каком диапазоне торговля выгодна обеим странам?',
+    options: ['The price should be more than 1/5 unit of food, but less than 1/4 unit of food.', 'The price should be more than 4 units of food, but less than 5 units of food.', 'The price should be more than 1/4 unit of food, but less than 1/2 unit of food.', 'The price should be more than 2 units of food, but less than 4 units of food.'],
+    answer: 3,
+    explain: 'Цена должна лежать между opportunity costs двух стран: Корея продаёт технику дороже своих 2 еды, Австралия покупает дешевле своих 4 еды. Диапазон 2 < P < 4.',
+  },
+];
