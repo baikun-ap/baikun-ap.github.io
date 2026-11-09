@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ALL_MICRO, ASSIGNMENTS, EXAM_SIZE, PER_ASSIGNMENT, type MicroQ } from '../content/micro';
 import { shuffle } from './exercises';
 import { useCourseCtx } from './ui';
@@ -117,6 +117,11 @@ function MicroPart({ items, onFinish, start, onAt }: { items: MicroQ[]; onFinish
   const choice = isChoice(q);
   const ok = choice ? picked === q.answer : self === true;
   const decided = choice ? picked !== null : self !== null;
+  const box = useRef<HTMLDivElement>(null);
+  // After an answer, bring the explanation and the Next button into view; a new question starts at the top.
+  useEffect(() => { if (decided) box.current?.querySelector('.quiz-foot')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [decided]);
+  const first = useRef(true);
+  useEffect(() => { if (first.current) { first.current = false; return; } box.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, [i]);
 
   const pick = (k: number) => { if (picked !== null) return; setPicked(k); mark(q.id, k === q.answer); actions.answered(k === q.answer); };
   const grade = (g: boolean) => { setSelf(g); mark(q.id, g); actions.answered(g); };
@@ -128,7 +133,7 @@ function MicroPart({ items, onFinish, start, onAt }: { items: MicroQ[]; onFinish
   };
 
   return (
-    <div className="quiz">
+    <div className="quiz" ref={box}>
       <Progress i={i} n={items.length} />
       <div className="q-prompt micro-q">
         <span className="small muted">{q.id.toUpperCase()}</span>

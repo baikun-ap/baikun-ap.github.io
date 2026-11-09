@@ -7,6 +7,8 @@
  * one without is an open question (`answer` is the model answer, shown on reveal).
  */
 
+import { A1 } from './micro-a1';
+
 export interface MicroQ {
   id: string;
   q: string;
@@ -31,7 +33,7 @@ export const EXAM_SIZE = 50;
 export const PER_ASSIGNMENT = 20;
 
 export const ASSIGNMENTS: Assignment[] = [
-  { n: 1, title: 'Assignment One', questions: [] },
+  { n: 1, title: 'Assignment One', chapters: 'Ch. 1 · Ten Principles of Economics', questions: A1 },
   { n: 2, title: 'Assignment Two', due: '2026-10-31', questions: [] },
   { n: 3, title: 'Assignment Three', questions: [] },
   { n: 4, title: 'Assignment Four', questions: [] },

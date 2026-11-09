@@ -744,3 +744,7 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 .micro-answer p, .micro-answer-text { font-size: 17px; font-weight: 600; margin: 6px 0; white-space: pre-line; }
 .micro-card { display: block; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; min-height: 200px; }
 .dash-micro { margin-top: 18px; }
+
+/* answer feedback and Next stay clear of the phone tab bar; a new question shows below the header */
+.micro .quiz-foot { scroll-margin-bottom: calc(var(--tab-h, 64px) + 24px); }
+.micro .quiz { scroll-margin-top: 72px; }
