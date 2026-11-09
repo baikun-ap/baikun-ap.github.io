@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#02060d">
+<meta name="theme-color" content="#c4cad1">
 <meta name="description" content="bai.kun — китайский язык с нуля: иероглифы, пиньинь, тоны, аудирование, распознавание речи, грамматика, тесты и карточки. Бесплатно, прямо в браузере.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -22,7 +22,6 @@
 <meta property="og:image" content="https://baikun-ap.github.io/icons/icon-512.png">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"bai.kun","alternateName":["baikun","baikun-ap","bai kun"],"url":"https://baikun-ap.github.io/","inLanguage":"ru"}</script>
 <script>
-  // Language before first paint (shared with the course through localStorage), and motion on/off.
   (function(){
     var d = document.documentElement, lang = 'ru';
     try { var s = localStorage.getItem('baikun-lang'); if (s === 'ru' || s === 'en') lang = s; else {
@@ -34,123 +33,58 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600&family=Oswald:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600&display=swap&text=%E3%80%8A%E3%80%8B%E5%8D%A1%E5%90%AC%E5%9D%A4%E5%A3%B0%E5%A7%8B%E5%AD%97%E5%BC%80%E6%8B%BC%E6%95%99%E6%B1%89%E6%B3%95%E7%99%BD%E7%A8%8B%E7%BB%8F%E8%80%83%E8%AF%AD%E8%AF%B4">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Antonio:wght@500;700&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap&text=%E5%AD%A6%E5%BC%80%E5%A7%8B">
 </head>
 <body>
-<div id="valley" aria-hidden="true"><div class="js-canvas-container"></div></div>
-<div class="scrim" aria-hidden="true"></div>
-<div class="bar" aria-hidden="true"><span></span></div>
+<div id="world" aria-hidden="true"><div class="js-canvas-container"></div></div>
 
 <header class="top">
-  <a class="logo" href="./">bai<i>.kun</i></a>
-  <nav aria-label="Разделы" data-en-aria="Sections">
-    <a href="app/#/course" data-en="Course">Курс</a>
-    <a href="app/#/hanzi" data-en="Characters">Иероглифы</a>
-    <a href="app/#/tones" data-en="Tones">Тоны</a>
-    <a href="app/#/midterm" data-en="Midterm">Мидтерм</a>
-    <a href="app/#/micro" data-en="Micro">Микро</a>
-    <button type="button" class="lang" id="lang">EN</button>
-    <a class="pill" href="app/#/" data-en="Start">Начать</a>
+  <a class="logo" href="./" aria-label="bai.kun">BAI.KUN</a>
+  <div class="tags">
+    <span class="chip tag" data-en="CHINESE / FROM ZERO">КИТАЙСКИЙ / С НУЛЯ</span>
+    <span class="chip tag">《汉语教程》 1A</span>
+    <span class="chip tag">N 23°08′ E 113°16′</span>
+  </div>
+  <nav class="nav">
+    <button type="button" class="chip" id="lang">EN</button>
+    <a class="chip solid" href="app/#/" data-en="START">НАЧАТЬ</a>
   </nav>
 </header>
 
-<main>
-  <section class="hero" id="hero">
-    <p class="eyebrow"><span class="tag">BAI.KUN</span><span class="tag">N 23°08′ · E 113°16′</span><span class="tag" data-en="CHINESE / FROM ZERO">КИТАЙСКИЙ / С НУЛЯ</span></p>
-    <h1 class="display" id="hero-title" data-en="Chinese that never melts.">Китайский, который не тает.</h1>
-    <p class="cap" data-en-html="Every character freezes into memory, layer by layer. <br>Lessons, tones and cards — free, in your browser.">Каждый иероглиф намерзает в памяти слой за слоем. <br>Уроки, тоны и карточки — бесплатно, в браузере.</p>
+<main class="captions">
+  <section class="cap" data-from="0.13" data-to="0.31">
+    <span class="chip tag">[01] 学 · XUÉ</span>
+    <h1 class="title" id="hero-title" data-en="Chinese that never melts.">Китайский, который не тает.</h1>
     <a class="go" id="go" href="app/#/course" aria-label="Начать курс" data-en-aria="Start the course"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M14 6l6 6-6 6"/></svg></a>
   </section>
-
-  <section class="manifesto" id="manifesto">
-    <p class="big" id="manifesto-text" data-en="Knowledge grows like ice: stroke by stroke, day by day. bai.kun walks you through 《汉语教程》 — from the first stroke to your own voice — and remembers where you stopped.">Знание растёт как лёд: черта за чертой, день за днём. bai.kun ведёт тебя по учебнику 《汉语教程》 — от первой черты до твоего голоса — и помнит, где ты остановился.</p>
+  <section class="cap" data-from="0.35" data-to="0.5">
+    <span class="chip tag" data-en="[02] — THE COURSE">[02] — КУРС</span>
+    <h2 class="title" data-en="Characters. Tones. Cards.">Иероглифы. Тоны. Карточки.</h2>
   </section>
-
-  <section class="worlds" id="worlds">
-    <p class="tag sec" data-en="[01] — THREE CRYSTALS">[01] — ТРИ КРИСТАЛЛА</p>
-    <h2 class="display h2" data-en="Three crystals">Три кристалла</h2>
-    <div class="world-grid">
-      <article class="world">
-        <span class="hz">字</span>
-        <span class="py">zì</span>
-        <h3 data-en="Characters and words">Иероглифы и слова</h3>
-        <p data-en="Lessons from 《汉语教程》, stroke order, handwriting and a dictionary of 800 characters.">Уроки по учебнику 《汉语教程》, порядок черт, письмо от руки и словарь из 800 знаков.</p>
-        <div class="links"><a href="app/#/course" data-en="Course">Курс</a><a href="app/#/write" data-en="Writing">Письмо</a><a href="app/#/hanzi" data-en="Dictionary">Словарь</a></div>
-      </article>
-      <article class="world">
-        <span class="hz">声</span>
-        <span class="py">shēng</span>
-        <h3 data-en="Sound">Звук</h3>
-        <p data-en="Pinyin, the four tones, listening and a microphone that hears your voice.">Пиньинь, четыре тона, аудирование и микрофон, который слышит твой голос.</p>
-        <div class="links"><a href="app/#/pinyin" data-en="Pinyin">Пиньинь</a><a href="app/#/tones" data-en="Tones">Тоны</a></div>
-      </article>
-      <article class="world">
-        <span class="hz">法</span>
-        <span class="py">fǎ</span>
-        <h3 data-en="Structure">Структура</h3>
-        <p data-en="Grammar as simple formulas, tests and spaced-repetition flashcards.">Грамматика простыми формулами, тесты и карточки с интервальными повторениями.</p>
-        <div class="links"><a href="app/#/grammar" data-en="Grammar">Грамматика</a><a href="app/#/cards" data-en="Cards">Карточки</a></div>
-      </article>
-    </div>
+  <section class="cap" data-from="0.53" data-to="0.67">
+    <span class="chip tag" data-en="[03] — THE LESSON">[03] — УРОК</span>
+    <h2 class="title" data-en="8 steps in every lesson.">8 шагов каждого урока.</h2>
   </section>
-
-  <section class="steps" id="steps">
-    <div class="steps-pin">
-      <p class="tag sec" data-en="[02] — THE LESSON">[02] — УРОК</p>
-      <h2 class="display h2" data-en="8 steps in every lesson">8 шагов каждого урока</h2>
-      <div class="track" id="track">
-        <article class="step"><b>01</b><span class="hz">字</span><h3 data-en="Characters">Иероглифы</h3><p data-en="Watch how each character is written, then write it yourself.">Смотришь, как пишется каждый знак, и пишешь сам.</p></article>
-        <article class="step"><b>02</b><span class="hz">拼</span><h3 data-en="Pinyin">Пиньинь</h3><p data-en="Read every word sound by sound in Latin letters.">Читаешь слово по звукам латиницей.</p></article>
-        <article class="step"><b>03</b><span class="hz">声</span><h3 data-en="Tones">Тоны</h3><p data-en="Tell the four tones apart by ear.">Различаешь четыре тона на слух.</p></article>
-        <article class="step"><b>04</b><span class="hz">听</span><h3 data-en="Listening">Аудирование</h3><p data-en="Listen to a native voice and pick the meaning.">Слушаешь фразы носителя и выбираешь смысл.</p></article>
-        <article class="step"><b>05</b><span class="hz">说</span><h3 data-en="Speaking">Говорение</h3><p data-en="Speak into the microphone, the site checks you.">Говоришь в микрофон, сайт проверяет произношение.</p></article>
-        <article class="step"><b>06</b><span class="hz">法</span><h3 data-en="Grammar">Грамматика</h3><p data-en="The lesson’s rules as simple formulas.">Правила урока в виде простых формул.</p></article>
-        <article class="step"><b>07</b><span class="hz">考</span><h3 data-en="Test">Тест</h3><p data-en="Check everything the lesson taught.">Проверяешь всё, что выучил за урок.</p></article>
-        <article class="step"><b>08</b><span class="hz">卡</span><h3 data-en="Flashcards">Карточки</h3><p data-en="Words go into spaced repetition so they stay.">Слова уходят в интервальные повторения и не забываются.</p></article>
-      </div>
-    </div>
+  <section class="cap" data-from="0.7" data-to="0.83">
+    <span class="chip tag" data-en="[04] — EXAMS">[04] — ЭКЗАМЕНЫ</span>
+    <h2 class="title" data-en="Midterm. Micro.">Мидтерм. Микро.</h2>
+    <div class="links"><a class="chip" href="app/#/midterm" data-en="MIDTERM →">МИДТЕРМ →</a><a class="chip" href="app/#/micro" data-en="MICRO →">МИКРО →</a></div>
   </section>
-
-  <section class="numbers" id="numbers">
-    <div class="num"><b data-to="800">800</b><span data-en="characters in the dictionary">иероглифов в словаре</span></div>
-    <div class="num"><b data-to="21">21</b><span data-en="lessons from the textbooks">урок по учебникам</span></div>
-    <div class="num"><b data-to="8">8</b><span data-en="steps in every lesson">шагов в каждом уроке</span></div>
-    <div class="num"><b data-to="4">4</b><span data-en="tones you will hear">тона, которые ты услышишь</span></div>
-  </section>
-
-  <section class="exams" id="exams">
-    <p class="tag sec" data-en="[03] — EXAMS">[03] — ЭКЗАМЕНЫ</p>
-    <h2 class="display h2" data-en="Ready for the exams">Готовься к экзаменам</h2>
-    <div class="exam-grid">
-      <a class="exam" href="app/#/midterm">
-        <span class="hz">考</span>
-        <h3 data-en="Chinese midterm">Мидтерм по китайскому</h3>
-        <p data-en="《汉语教程》 1A, lessons 1–8: writing, reading, sentences, listening and the teacher’s practice test.">《汉语教程》 1A, уроки 1–8: письмо, чтение, предложения, аудирование и тест как у преподавателя.</p>
-        <span class="more" data-en="Open →">Открыть →</span>
-      </a>
-      <a class="exam" href="app/#/micro">
-        <span class="hz">经</span>
-        <h3 data-en="Microeconomics">Микроэкономика</h3>
-        <p data-en="4 assignments of 20 questions, a 50-question mock exam, your mistakes and flip cards.">4 задания по 20 вопросов, пробный экзамен на 50 вопросов, ошибки и карточки.</p>
-        <span class="more" data-en="Open →">Открыть →</span>
-      </a>
-    </div>
-  </section>
-
-  <section class="final" id="final">
-    <p class="kai zh" id="kai" lang="zh">开始</p>
-    <p class="cap" data-en="Your first lesson takes five minutes.">Первый урок — пять минут.</p>
-    <a class="pill big-pill" href="app/#/" data-en="Start the first lesson">Начать первый урок</a>
-    <p class="foot" data-en="bai.kun · free, no sign-up · progress stays on your device">bai.kun · бесплатно, без регистрации · прогресс хранится на твоём устройстве</p>
+  <section class="cap final" data-from="0.88" data-to="1.01">
+    <span class="chip tag">[05] 开始 · KĀISHǏ</span>
+    <a class="chip solid big" href="app/#/" data-en="START THE FIRST LESSON">НАЧАТЬ ПЕРВЫЙ УРОК</a>
   </section>
 </main>
 
-<div class="corner">
-  <span data-en="Scroll to dive">Листай вглубь</span><i></i>
-  <button class="sound" id="sound" type="button" aria-pressed="false" aria-label="Фоновый звук" data-en-aria="Ambient sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5Z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="x" d="m16 10 4 4m0-4-4 4"/></svg></button>
-</div>
-<div class="loader" id="loader"><span></span></div>
+<footer class="bottom">
+  <span class="chip tag" id="scene">01 / 05</span>
+  <span class="chip tag" data-en="SCROLL TO DIVE">ЛИСТАЙ ВГЛУБЬ</span>
+  <button class="chip sound" id="sound" type="button" aria-pressed="false" aria-label="Фоновый звук" data-en-aria="Ambient sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5Z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="x" d="m16 10 4 4m0-4-4 4"/></svg></button>
+</footer>
+
+<div class="track" aria-hidden="true"></div>
+<div class="loader" id="loader"><span class="tag">LOADING · 载入</span></div>
 
 <script type="module" src="/src/landing/main.ts"></script>
 </body>

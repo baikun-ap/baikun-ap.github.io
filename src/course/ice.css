@@ -127,3 +127,33 @@ code { background: var(--blue-wash); }
 /* the current lesson step: an iridescent tile, readable in both themes */
 .step.cur { background: var(--iri); color: #06101f; border-color: transparent; }
 .step.cur .zh, .step.cur span { color: #06101f; }
+
+/* ==========================================================================
+   Frost fog (light): the same pale, monochrome world as the landing —
+   fog greys, white glass, dark mono chips for actions. Dark stays polar night.
+   ========================================================================== */
+:root[data-theme='light'] {
+  --navy: #c9cfd6; --ground: #c9cfd6;
+  --frost: rgba(236, 240, 244, .96); --void: rgba(236, 240, 244, .96);
+  --card: rgba(246, 248, 250, .7); --glass: rgba(246, 248, 250, .7); --surface: rgba(246, 248, 250, .7); --raised: rgba(250, 251, 252, .78);
+  --rule: rgba(40, 50, 62, .22); --rule-soft: rgba(40, 50, 62, .12); --glass-line: rgba(40, 50, 62, .12);
+  --ink: #1d2228; --ink-muted: #4f5964; --ink-faint: #7b858f;
+  --cyan: #2f4a66; --cyan-deep: #1d2228; --mid: #3a4a5c;
+  --iri: linear-gradient(120deg, #ffffff 0%, #e3e9ef 100%);
+  --edge: rgba(255, 255, 255, .9);
+  --lift: 0 12px 34px rgba(40, 52, 66, .14);
+}
+:root[data-theme='light'] body { background: radial-gradient(120% 80% at 50% 0%, #e2e6ea 0%, transparent 60%), radial-gradient(100% 70% at 50% 110%, #aeb6bf 0%, transparent 60%), var(--navy); background-attachment: fixed; }
+:root[data-theme='light'] .x-tabs, :root[data-theme='light'] .x-top { background: #dfe4e9; }
+/* actions are dark chips with mono caps, like the landing */
+:root[data-theme='light'] .btn.primary { background: #1d2228; color: #f6f8fa; box-shadow: 0 8px 24px rgba(29, 34, 40, .25); border-radius: 4px; font-family: var(--mono); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+:root[data-theme='light'] .btn.primary:hover:not(:disabled) { background: #f6f8fa; color: #1d2228; }
+:root[data-theme='light'] .btn, :root[data-theme='light'] .chip { border-radius: 4px; }
+:root[data-theme='light'] .pill, :root[data-theme='light'] .mt-lessons .chip.on, :root[data-theme='light'] .step.cur, :root[data-theme='light'] .mic { background: #1d2228; color: #f6f8fa; }
+:root[data-theme='light'] .step.cur .zh, :root[data-theme='light'] .step.cur span { color: #f6f8fa; }
+:root[data-theme='light'] .bar > span { background: #1d2228; }
+:root[data-theme='light'] .hero-zh, :root[data-theme='light'] .world-hz, :root[data-theme='light'] .mt-zh {
+  background: none; color: #ffffff; -webkit-text-stroke: 1px rgba(29, 34, 40, .35); filter: drop-shadow(0 6px 18px rgba(40, 52, 66, .25));
+}
+:root[data-theme='light'] .x-logo i { background: none; color: var(--ink-faint); }
+:root[data-theme='light'] .eyebrow, :root[data-theme='light'] .x-eyebrow { color: var(--ink-muted); }
