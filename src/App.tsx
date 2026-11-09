@@ -11,6 +11,7 @@ import Midterm from './course/Midterm';
 import WritePage from './course/Write';
 import PartsPage from './course/Notes';
 import Guard from './components/Guard';
+import { IceBackground } from './ice/Ice';
 import Micro from './course/Micro';
 import { setLang, t, useLang } from './i18n';
 
@@ -72,7 +73,7 @@ export default function App() {
   const theme = themePref === 'auto' ? (systemDark ? 'dark' : 'light') : themePref;
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#161617' : '#ffffff');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#030914' : '#eaf3fb');
     try { localStorage.setItem('baikun-theme', theme); } catch { /* ignore */ }
   }, [theme]);
 
@@ -102,6 +103,7 @@ export default function App() {
   return (
     <div className="x">
       <div className="stars" aria-hidden="true" />
+      <IceBackground />
       <header className="x-top">
         <a className="x-logo" href="../" aria-label={t('bai.kun — на главную', 'bai.kun — home page')}>bai<i>.kun</i></a>
         <nav className="x-nav" aria-label={t('Разделы', 'Sections')}>

@@ -37,7 +37,7 @@ for (const [w, h, locale] of [[390, 844, 'ru-RU'], [820, 1180, 'en-US'], [1440, 
   ok(await page.locator('.js-canvas-container canvas').count() === 1, `${tag} valley canvas mounted`);
   ok(await page.locator('#hero-title').isVisible(), `${tag} hero title visible`);
   const title = (await page.locator('#hero-title').innerText()).replace(/\s+/g, ' ').trim();
-  ok(locale.startsWith('en') ? /Grown/.test(title) : /Выращивай/.test(title), `${tag} hero title in ${locale.slice(0, 2)}: “${title}”`);
+  ok(locale.startsWith('en') ? /melts/.test(title) : /не тает/.test(title), `${tag} hero title in ${locale.slice(0, 2)}: “${title}”`);
   await page.screenshot({ path: `${OUT}/${tag}-top.png` });
 
   const H = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
@@ -71,7 +71,7 @@ for (const [w, h, locale] of [[390, 844, 'ru-RU'], [820, 1180, 'en-US'], [1440, 
   await page.waitForTimeout(1500);
   await Promise.all([page.waitForNavigation(), page.click('#lang')]);
   await page.waitForTimeout(1500);
-  ok(/Grown/.test(await page.locator('#hero-title').innerText()), 'EN switch turns the page English');
+  ok(/melts/.test(await page.locator('#hero-title').innerText()), 'EN switch turns the page English');
   ok(await page.evaluate(() => localStorage.getItem('baikun-lang')) === 'en', 'EN choice is shared with the course');
   await ctx.close();
 }

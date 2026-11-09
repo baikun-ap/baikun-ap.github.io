@@ -1,10 +1,10 @@
-import { animate, createTimeline, onScroll, splitText, stagger } from 'animejs';
-import { createValley, type Valley } from '../valley/scene';
+import { animate, createTimeline, onScroll, scrambleText, splitText, stagger } from 'animejs';
+import { createIceWorld, type World } from './ice';
 import './style.css';
 
 /**
- * The landing page: the flower valley stays fixed behind a long page, the
- * scroll flies the camera through it, and every block is tied to the scroll
+ * The landing page: the ice world stays fixed behind a long page, the
+ * scroll flies the camera through the ice, and every block is tied to the scroll
  * with Anime.js (scrubbed forward when you scroll down, backward when you
  * scroll up). With reduced motion everything is simply shown.
  */
@@ -20,7 +20,7 @@ if (lang === 'en') {
   $$('[data-en]').forEach((el) => { el.textContent = el.dataset.en ?? el.textContent; });
   $$('[data-en-html]').forEach((el) => { el.innerHTML = el.dataset.enHtml ?? el.innerHTML; });
   $$('[data-en-aria]').forEach((el) => { el.setAttribute('aria-label', el.dataset.enAria ?? ''); });
-  document.title = 'bai.kun (baikun) — Chinese that grows';
+  document.title = 'bai.kun (baikun) — Chinese that never melts';
   $('meta[name="description"]')?.setAttribute('content', 'bai.kun — Chinese from zero: characters, pinyin, tones, listening, speech recognition, grammar, tests and flashcards. Free, right in your browser.');
 }
 const langBtn = $<HTMLButtonElement>('#lang');
@@ -33,7 +33,7 @@ if (langBtn) {
   });
 }
 
-/* ---------- the valley ---------- */
+/* ---------- the ice world ---------- */
 const loader = $('#loader');
 let entered = false;
 const enter = () => {
@@ -43,7 +43,7 @@ const enter = () => {
   heroEntrance();
 };
 const canvasHost = $('.js-canvas-container');
-const valley: Valley | null = canvasHost ? createValley(canvasHost, enter) : null;
+const valley: World | null = canvasHost ? createIceWorld(canvasHost, enter) : null;
 if (!valley) enter();
 // Never keep the loader up for long, whatever the GPU does.
 setTimeout(enter, 2500);
@@ -88,6 +88,7 @@ function heroEntrance() {
     tl.set('.hero h1', { opacity: 1 })
       .add(chars, { y: ['0.6em', 0], opacity: [0, 1], rotate: [8, 0], duration: 1300, delay: stagger(28) }, 0)
       .add('.hero .eyebrow', { opacity: [0, 1], y: [12, 0], duration: 1000 }, 200)
+      .call(() => $$('.hero .tag').forEach((el, i) => decode(el, i * 120)), 100)
       .add('.hero .cap', { opacity: [0, 1], y: [18, 0], duration: 1100 }, 450)
       .add('.hero .go', { opacity: [0, 1], scale: [0.4, 1], duration: 1200, ease: 'outElastic(1, .55)' }, 650)
       .call(() => root.classList.add('shown'), 300);
@@ -99,6 +100,18 @@ if (!motion) root.classList.add('shown');
 if (motion) safe(() => {
   animate('.go svg', { x: [0, 4, 0], duration: 2400, loop: true, ease: 'inOutSine', delay: 2600 });
 });
+
+/** Technical labels decode like a terminal as they appear (the Igloo touch). */
+function decode(el: Element, delay = 0) {
+  safe(() => { animate(el, { innerHTML: scrambleText({ chars: 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*+=<>/' }), duration: 900, delay, ease: 'linear' }); });
+}
+if (motion) {
+  const seen = new WeakSet<Element>();
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting && !seen.has(e.target)) { seen.add(e.target); decode(e.target); } });
+  }, { threshold: 0.6 });
+  document.querySelectorAll('.tag, .world .py, .step b, .exam .more, .foot').forEach((el) => io.observe(el));
+}
 
 if (motion) {
   /** Scrubbed by the scroll between two thresholds of `target`. */

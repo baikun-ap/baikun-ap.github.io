@@ -5,7 +5,7 @@ import { ALL_GRAMMAR, BOOKS, LESSONS, STEPS } from './data';
 import { GrammarCard } from './Lesson';
 import { markTone } from './exercises';
 import CardReview from './CardReview';
-import { Bar, Planet, Py, Ring, Say, StrokeBox, VoiceWarning, useCourseCtx, useSay, type PlanetKey } from './ui';
+import { Bar, Py, Ring, Say, StrokeBox, VoiceWarning, useCourseCtx, useSay, type PlanetKey } from './ui';
 import { dueCards, type CourseState } from './store';
 import { CHARACTERS, BY_CHAR } from '../lib/syllables';
 import { parsePinyin, stripTone } from '../lib/pinyin';
@@ -80,7 +80,7 @@ export function Dashboard() {
         <div className="hero-copy">
           <span className="eyebrow">{fresh ? t('欢迎 · ДОБРО ПОЖАЛОВАТЬ', '欢迎 · WELCOME') : t('加油 · ПРОДОЛЖАЕМ', '加油 · KEEP GOING')}</span>
           <h1 className="serif">{fresh ? t('Начни свой путь в китайский язык', 'Start your journey into Chinese') : `${t('Урок', 'Lesson')} ${nx.lesson.n}: ${L(nx.lesson.title)}`}</h1>
-          <p className="muted">{fresh ? t('bai.kun — твой китайский среди звёзд. Каждый урок проходит 8 шагов: от иероглифа до твоего голоса.', 'bai.kun — your Chinese among the stars. Every lesson walks through 8 steps, from the character to your own voice.') : `${t('Следующий шаг — ', 'Next step: ')}${t(stepInfo.title, stepInfo.en).toLowerCase()}. ${L(nx.lesson.goal)}`}</p>
+          <p className="muted">{fresh ? t('bai.kun — китайский, который не тает. Каждый урок проходит 8 шагов: от иероглифа до твоего голоса.', 'bai.kun — Chinese that never melts. Every lesson walks through 8 steps, from the character to your own voice.') : `${t('Следующий шаг — ', 'Next step: ')}${t(stepInfo.title, stepInfo.en).toLowerCase()}. ${L(nx.lesson.goal)}`}</p>
           <div className="row">
             <a className="btn primary lg" href={`#/lesson/${nx.lesson.id}/${nx.step}`}>{fresh ? t('Начать первый урок', 'Start the first lesson') : t('Продолжить', 'Continue')}</a>
             {due > 0 && <a className="btn lg" href="#/cards">{t('Повторить', 'Review')} {count(due, ['карточку', 'карточки', 'карточек'], ['card', 'cards'])}</a>}
@@ -109,9 +109,9 @@ export function Dashboard() {
       <section className="worlds">
         {worlds().map((w) => (
           <article key={w.p} className={`world world-${w.p}`}>
-            <Planet p={w.p} size={92} />
+            <span className="world-hz zh" aria-hidden="true">{w.p === 'earth' ? '字' : w.p === 'venus' ? '声' : '法'}</span>
             <div>
-              <h3><span className="zh">{w.p === 'earth' ? '地球' : w.p === 'venus' ? '金星' : '火星'}</span> {w.title}</h3>
+              <h3><span className="zh">{w.p === 'earth' ? '汉字' : w.p === 'venus' ? '声音' : '语法'}</span> {w.title}</h3>
               <p className="muted small">{w.text}</p>
               <div className="row">{w.links.map(([label, h]) => <a key={h} className="chip" href={h}>{label}</a>)}</div>
             </div>
