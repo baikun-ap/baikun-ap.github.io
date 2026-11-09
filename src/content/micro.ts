@@ -9,6 +9,7 @@
 
 import { A1 } from './micro-a1';
 import { A3 } from './micro-a3';
+import { A4 } from './micro-a4';
 
 export interface MicroQ {
   id: string;
@@ -37,7 +38,7 @@ export const ASSIGNMENTS: Assignment[] = [
   { n: 1, title: 'Assignment One', chapters: 'Ch. 1 · Ten Principles of Economics', questions: A1 },
   { n: 2, title: 'Assignment Two', due: '2026-10-31', questions: [] },
   { n: 3, title: 'Assignment Three', chapters: 'Ch. 3 · Interdependence and the Gains from Trade', questions: A3 },
-  { n: 4, title: 'Assignment Four', questions: [] },
+  { n: 4, title: 'Assignment Four', chapters: 'Ch. 4 · The Market Forces of Supply and Demand', questions: A4 },
 ];
 
 export const ALL_MICRO = (): MicroQ[] => ASSIGNMENTS.flatMap((a) => a.questions);
