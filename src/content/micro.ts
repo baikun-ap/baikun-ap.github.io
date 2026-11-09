@@ -8,6 +8,7 @@
  */
 
 import { A1 } from './micro-a1';
+import { A2 } from './micro-a2';
 import { A3 } from './micro-a3';
 import { A4 } from './micro-a4';
 
@@ -36,7 +37,7 @@ export const PER_ASSIGNMENT = 20;
 
 export const ASSIGNMENTS: Assignment[] = [
   { n: 1, title: 'Assignment One', chapters: 'Ch. 1 · Ten Principles of Economics', questions: A1 },
-  { n: 2, title: 'Assignment Two', due: '2026-10-31', questions: [] },
+  { n: 2, title: 'Assignment Two', chapters: 'Ch. 2 · Thinking Like an Economist', questions: A2 },
   { n: 3, title: 'Assignment Three', chapters: 'Ch. 3 · Interdependence and the Gains from Trade', questions: A3 },
   { n: 4, title: 'Assignment Four', chapters: 'Ch. 4 · The Market Forces of Supply and Demand', questions: A4 },
 ];
