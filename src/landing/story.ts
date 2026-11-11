@@ -8,6 +8,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { fbm2, makeBeam, makeSeamMap, makeSurfaces } from './tex';
+import { applyScan, loadScan, loadSky, makeIce, makeSnow, sunDir, tickMaterials } from './materials';
 
 /**
  * The landing story, one long scroll through a frozen, foggy world:
@@ -78,6 +79,18 @@ function build(host: HTMLElement, onReady: () => void): Story {
   scene.fog = new THREE.Fog(FOG, 14, 46);
   const camera = new THREE.PerspectiveCamera(mobile ? 60 : 46, innerWidth / innerHeight, 0.1, 140);
 
+  // Glowing see-through things (light shafts, snow, dust) must stay out of the
+  // depth/normal renders of the AO and depth-of-field passes: drawn there as
+  // solid quads they turned into big dark rectangles on computers.
+  const airy: THREE.Object3D[] = [];
+  const skipAiry = (pass: { render: (...a: never[]) => void }) => {
+    const draw = pass.render.bind(pass);
+    pass.render = (...a: never[]) => {
+      const shown = airy.map((o) => o.visible);
+      airy.forEach((o) => { o.visible = false; });
+      try { draw(...a); } finally { airy.forEach((o, i) => { o.visible = shown[i]; }); }
+    };
+  };
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
   // Contact shadows in the crevices between bricks and rocks (too heavy for phones).
@@ -85,12 +98,14 @@ function build(host: HTMLElement, onReady: () => void): Story {
     const ao = new GTAOPass(scene, camera, innerWidth, innerHeight);
     ao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1.1 });
     ao.blendIntensity = 0.85;
+    skipAiry(ao);
     composer.addPass(ao);
   }
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.4, 0.97);
   composer.addPass(bloom);
   // Depth of field: the subject sharp, the far fog and near snow soft.
   const bokeh = new BokehPass(scene, camera, { focus: 12, aperture: mobile ? 0.0012 : 0.0018, maxblur: mobile ? 0.005 : 0.008 });
+  skipAiry(bokeh);
   composer.addPass(bokeh);
   const grade = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uTime: { value: 0 } },
@@ -106,7 +121,20 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.22;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x7f8a96, 1.1));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x7f8a96, 1.1);
+  scene.add(hemi);
+  // Without a graphics card (a software renderer: seconds per frame) the scans
+  // and the sky only stall the page, so it keeps the light procedural look.
+  // ?hq forces them anyway (for recordings).
+  const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '');
+  const rich = !/swiftshader|llvmpipe|softpipe|software/i.test(gpu) || new URLSearchParams(location.search).has('hq');
+  // The overcast winter-field sky replaces the studio room once it arrives,
+  // turned so its bright patch of cloud sits where the sun light comes from.
+  scene.environmentRotation.y = -1.5;
+  if (rich) loadSky(renderer).then((env) => {
+    scene.environment = env; scene.environmentIntensity = 0.62; hemi.intensity = 0.55;
+  }).catch((e) => console.warn('[story] sky', e));
   const surf = makeSurfaces(mobile);
   const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-7, 13, 9); sun.target.position.set(0, 2, 0);
   sun.castShadow = true;
@@ -114,6 +142,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 45 });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03; sun.shadow.radius = 4;
   scene.add(sun, sun.target);
+  sunDir.value.copy(sun.position).sub(sun.target.position).normalize();
+  // Photo-scanned snow and rock stream in after the first frames (2k on computers).
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const big = !mobile && Math.min(screen.width, screen.height) * devicePixelRatio >= 1000;
 
   const rand = (s: number) => { const v = Math.sin(s * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
 
@@ -131,7 +163,9 @@ function build(host: HTMLElement, onReady: () => void): Story {
   }
   hillGeo.computeVertexNormals();
   [surf.snow.normal, surf.snow.rough].forEach((t) => t.repeat.set(14, 14));
-  const hill = new THREE.Mesh(hillGeo, new THREE.MeshStandardMaterial({ color: 0xd4dae0, roughness: 1, roughnessMap: surf.snow.rough, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.9, 0.9) }));
+  const hillMat = new THREE.MeshStandardMaterial({ color: 0xd4dae0, roughness: 1, roughnessMap: surf.snow.rough, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.9, 0.9) });
+  makeSnow(hillMat, mobile ? 2.2 : 3);
+  const hill = new THREE.Mesh(hillGeo, hillMat);
   hill.receiveShadow = true;
   scene.add(hill);
 
@@ -146,6 +180,19 @@ function build(host: HTMLElement, onReady: () => void): Story {
       p.setXYZ(k, v.x * r * f, v.y * r * f * 0.78, v.z * r * f);
     }
     g.computeVertexNormals();
+    // Box-projected UVs per triangle (by its facing), so the scanned rock keeps
+    // the same texel size on every stone and never pinches at a pole.
+    const uv = g.getAttribute('uv') as THREE.BufferAttribute, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    for (let k = 0; k < p.count; k += 3) {
+      a.fromBufferAttribute(p, k); b.fromBufferAttribute(p, k + 1); c.fromBufferAttribute(p, k + 2);
+      const n = b.clone().sub(a).cross(c.clone().sub(a));
+      const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+      for (let j = 0; j < 3; j++) {
+        v.fromBufferAttribute(p, k + j);
+        const [s0, t0] = ax >= ay && ax >= az ? [v.z, v.y] : ay >= az ? [v.x, v.z] : [v.x, v.y];
+        uv.setXY(k + j, s0 * 0.45 + seed * 0.37, t0 * 0.45 + seed * 0.11);
+      }
+    }
     return g;
   };
   // Stones half-buried in the snow around the character.
@@ -187,7 +234,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
       sp.scale.set(2.2 + rand(j * 7 + i + 3) * 2.5, 16, 1);
       sp.material.rotation = -0.38 + (rand(j * 7 + i + 4) - 0.5) * 0.2;
       sp.userData.phase = rand(j * 7 + i + 5) * 6;
-      scene.add(sp); beams.push(sp);
+      scene.add(sp); beams.push(sp); airy.push(sp);
     }
   });
 
@@ -197,6 +244,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
     color: 0xe6edf3, roughness: 0.42, roughnessMap: surf.ice.rough, normalMap: surf.ice.normal, normalScale: new THREE.Vector2(0.7, 0.7),
     clearcoat: 0.7, clearcoatRoughness: 0.25, emissive: 0xffffff, emissiveMap: makeSeamMap(), emissiveIntensity: 0,
   });
+  makeIce(blockMat, { deep: 0x6f9cc4, glow: 0xe4f4ff, depth: 0.6, scale: 7 });
   let blocks: THREE.InstancedMesh | null = null;
   let jitter: THREE.Vector3[] = [], jscale: number[] = [];
   let targets: THREE.Vector3[] = [], scatter: THREE.Vector3[] = [], burst: THREE.Vector3[] = [], spin: THREE.Vector3[] = [], delay: number[] = [];
@@ -258,6 +306,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   /* ---------- scene 4: eight ice segments in a ring ---------- */
   const ring = new THREE.Group(); ring.position.set(0, 2.4, -80); scene.add(ring);
   const iceMat = new THREE.MeshPhysicalMaterial({ color: 0xeef3f7, roughness: 0.18, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.4, sheenColor: new THREE.Color(0xcfe9ff), roughnessMap: surf.ice.rough, normalMap: surf.ice.normal, normalScale: new THREE.Vector2(0.5, 0.5), emissive: 0x9fb6cc, emissiveIntensity: 0.08 });
+  makeIce(iceMat, { deep: 0x93b5d2, glow: 0xeaf6ff, depth: 0.6, scale: 1.6 });
   const segs: THREE.Mesh[] = [];
   for (let i = 0; i < 8; i++) {
     const m = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.42, 16, 28, (Math.PI * 2) / 8 * 0.78), iceMat);
@@ -280,14 +329,18 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const coreGeo = new THREE.BufferGeometry(); coreGeo.setAttribute('position', new THREE.BufferAttribute(cp, 3));
   const coreMat = new THREE.PointsMaterial({ color: new THREE.Color(1.15, 1.2, 1.28), size: 0.045, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
   const core = new THREE.Points(coreGeo, coreMat);
-  portal.add(core);
+  portal.add(core); airy.push(core);
   const portalLight = new THREE.PointLight(0xdaf0ff, 6, 9); portal.add(portalLight);
 
   /* ---------- scene 6: 开始 out of ice dust on a platform ---------- */
   const fin = new THREE.Group(); fin.position.set(0, 0, -140); scene.add(fin);
-  const plat = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.8, 0.35, 128), new THREE.MeshPhysicalMaterial({ color: 0xdfe4e9, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 }));
+  const platMat = new THREE.MeshPhysicalMaterial({ color: 0xdfe4e9, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 });
+  makeIce(platMat, { deep: 0x88abc9, glow: 0xeef7ff, depth: 0.45, scale: 0.9 });
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.8, 0.35, 128), platMat);
   plat.position.y = 0.1; fin.add(plat);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0xcfd5db, roughness: 1, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.6, 0.6) }));
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0xcfd5db, roughness: 1, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.6, 0.6) });
+  makeSnow(floorMat, mobile ? 1.6 : 2.2);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), floorMat);
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.08; fin.add(floor);
   [5, 6.4, 8.2].forEach((r) => {
     const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.04, 96), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
@@ -304,14 +357,29 @@ function build(host: HTMLElement, onReady: () => void): Story {
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(dustFrom.slice(), 3));
     dust = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: mobile ? 0.06 : 0.05, transparent: true, depthWrite: false }));
-    fin.add(dust);
+    fin.add(dust); airy.push(dust);
   });
+
+  /* ---------- scanned materials replace the procedural ones ---------- */
+  // Fetched after the page has loaded, so they never delay it.
+  const scans = () => {
+    loadScan('snow', big, aniso).then((s) => {
+      hillMat.normalScale.set(0.6, 0.6); applyScan(hillMat, s, 22, 0.35); hillMat.color.set(0xf2f5f8);
+      // The floor is a circle of radius 30: its uv spans 60 m, the hill's 80 m.
+      floorMat.normalScale.set(0.5, 0.5); applyScan(floorMat, { col: s.col.clone(), nor: s.nor.clone(), arm: s.arm.clone() }, 16, 0.35); floorMat.color.set(0xeaeef2);
+    }).catch((e) => console.warn('[story] snow', e));
+    loadScan('rock', big, aniso).then((s) => {
+      rockMat.normalScale.set(1.1, 1.1); applyScan(rockMat, s, 1, 0.6); rockMat.color.set(0xd3dae1);
+    }).catch((e) => console.warn('[story] rock', e));
+  };
+  if (!rich) { /* procedural maps only */ } else if (document.readyState === 'complete') scans(); else addEventListener('load', scans, { once: true });
 
   /* ---------- snow everywhere ---------- */
   const snowN = mobile ? 900 : 1800, sp = new Float32Array(snowN * 3);
   for (let i = 0; i < snowN; i++) { sp[i * 3] = (rand(i + 90) - 0.5) * 40; sp[i * 3 + 1] = rand(i + 91) * 14 - 1; sp[i * 3 + 2] = 18 - rand(i + 92) * 170; }
   const snowGeo = new THREE.BufferGeometry(); snowGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  scene.add(new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: mobile ? 0.06 : 0.05, transparent: true, opacity: 0.9, depthWrite: false })));
+  const flakes = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: mobile ? 0.06 : 0.05, transparent: true, opacity: 0.9, depthWrite: false }));
+  scene.add(flakes); airy.push(flakes);
 
   /* ---------- the camera path ---------- */
   const keys: [number, THREE.Vector3, THREE.Vector3][] = [
@@ -453,6 +521,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
     }
 
     grade.uniforms.uTime.value = t;
+    tickMaterials(t);
     composer.render();
     if (!ready && t > 0.15) { ready = true; onReady(); }
   };
