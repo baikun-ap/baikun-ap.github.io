@@ -80,3 +80,9 @@ a.chip:hover, button.chip:hover { background: var(--white); color: var(--ink); }
   .bottom .chip:nth-child(2) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .loader .tag { animation: none; } }
+
+/* Fewer words on screen: each caption is a small mono plate, like a HUD readout. */
+.cap .title { font-family: var(--mono); font-weight: 500; font-size: 13px; line-height: 1.45; letter-spacing: .12em; text-transform: uppercase;
+  padding: 8px 12px; border-radius: 3px; background: var(--chip); color: var(--white); text-shadow: none; max-width: min(92vw, 36ch); perspective: none;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+@media (max-width: 820px) { .cap .title { font-size: 12px; } }

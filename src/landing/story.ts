@@ -4,6 +4,10 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { fbm2, makeBeam, makeSeamMap, makeSurfaces } from './tex';
 
 /**
  * The landing story, one long scroll through a frozen, foggy world:
@@ -26,32 +30,6 @@ export interface Story {
 }
 
 const FOG = new THREE.Color(0xc4cad1);
-
-const BLOCK_VERT = `
-  varying vec3 vN; varying vec2 vUv; varying float vDepth;
-  void main() {
-    mat4 m = modelMatrix * instanceMatrix;
-    vN = normalize(mat3(m) * normal);
-    vUv = uv;
-    vec4 mv = viewMatrix * m * vec4(position, 1.0);
-    vDepth = -mv.z;
-    gl_Position = projectionMatrix * mv;
-  }
-`;
-const BLOCK_FRAG = `
-  uniform float uGlow; uniform vec3 uFog; uniform float uNear; uniform float uFar;
-  varying vec3 vN; varying vec2 vUv; varying float vDepth;
-  void main() {
-    float l = 0.58 + 0.42 * max(dot(normalize(vN), normalize(vec3(-0.4, 0.85, 0.35))), 0.0);
-    vec3 col = vec3(0.86, 0.89, 0.92) * l;
-    float e = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
-    float seam = 1.0 - smoothstep(0.03, 0.11, e);
-    col = mix(col, vec3(1.12, 1.18, 1.25), seam * uGlow);
-    col += vec3(0.12, 0.16, 0.2) * uGlow * (1.0 - seam) * 0.4;
-    float f = smoothstep(uNear, uFar, vDepth);
-    gl_FragColor = vec4(mix(col, uFog, f), 1.0);
-  }
-`;
 
 /** Filled cells of a glyph drawn on a small canvas, centred, y up. */
 async function glyphCells(text: string, w: number, h: number, step: number): Promise<THREE.Vector2[]> {
@@ -86,7 +64,9 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = innerWidth <= 820;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 2.5 : 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.92;
   renderer.setSize(innerWidth, innerHeight);
@@ -100,8 +80,18 @@ function build(host: HTMLElement, onReady: () => void): Story {
 
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
+  // Contact shadows in the crevices between bricks and rocks (too heavy for phones).
+  if (!mobile) {
+    const ao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+    ao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1.1 });
+    ao.blendIntensity = 0.85;
+    composer.addPass(ao);
+  }
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.4, 0.97);
   composer.addPass(bloom);
+  // Depth of field: the subject sharp, the far fog and near snow soft.
+  const bokeh = new BokehPass(scene, camera, { focus: 12, aperture: mobile ? 0.0012 : 0.0018, maxblur: mobile ? 0.005 : 0.008 });
+  composer.addPass(bokeh);
   const grade = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uTime: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -117,32 +107,98 @@ function build(host: HTMLElement, onReady: () => void): Story {
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.22;
   scene.add(new THREE.HemisphereLight(0xffffff, 0x7f8a96, 1.1));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-6, 10, 6); scene.add(sun);
+  const surf = makeSurfaces(mobile);
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-7, 13, 9); sun.target.position.set(0, 2, 0);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
+  Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 45 });
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03; sun.shadow.radius = 4;
+  scene.add(sun, sun.target);
 
   const rand = (s: number) => { const v = Math.sin(s * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
 
   /* ---------- scene 2: the snowy hill ---------- */
-  const hillGeo = new THREE.PlaneGeometry(70, 70, 200, 200);
+  const hillGeo = new THREE.PlaneGeometry(80, 80, mobile ? 170 : 240, mobile ? 170 : 240);
   hillGeo.rotateX(-Math.PI / 2);
   const hp = hillGeo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < hp.count; i++) {
     const x = hp.getX(i), z = hp.getZ(i);
     const r2 = x * x + z * z;
-    const mound = 1.7 * Math.exp(-r2 / 40) - 0.6 * Math.exp(-r2 / 6) + 0.6;
-    const n = Math.sin(x * 0.9) * Math.cos(z * 1.1) * 0.12 + Math.sin(x * 2.7 + z * 1.9) * 0.05 + (rand(i) - 0.5) * 0.06;
-    hp.setY(i, mound + n - 1.2 + Math.max(0, (Math.abs(x) - 14)) * 0.35);
+    const mound = 1.8 * Math.exp(-r2 / 42) - 0.55 * Math.exp(-r2 / 6) + 0.6;
+    // Broad swells, wind ridges and small lumps of packed snow.
+    const n = (fbm2(x * 0.12 + 7, z * 0.12) - 0.5) * 1.6 + (fbm2(x * 0.55, z * 0.55 + 3, 3) - 0.5) * 0.35 + Math.pow(Math.abs(Math.sin(x * 0.35 + z * 0.9 + fbm2(x * 0.2, z * 0.2) * 3)), 6) * 0.12;
+    hp.setY(i, mound + n - 1.2 + Math.max(0, Math.abs(x) - 13) * 0.4);
   }
   hillGeo.computeVertexNormals();
-  const hill = new THREE.Mesh(hillGeo, new THREE.MeshStandardMaterial({ color: 0xc9d0d7, roughness: 0.95, flatShading: true }));
+  [surf.snow.normal, surf.snow.rough].forEach((t) => t.repeat.set(14, 14));
+  const hill = new THREE.Mesh(hillGeo, new THREE.MeshStandardMaterial({ color: 0xd4dae0, roughness: 1, roughnessMap: surf.snow.rough, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.9, 0.9) }));
+  hill.receiveShadow = true;
   scene.add(hill);
+
+  // Rock material (scattered stones, floating rocks): cracked and normal-mapped.
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0xb9c1c9, map: surf.rock.color, roughnessMap: surf.rock.rough, normalMap: surf.rock.normal, normalScale: new THREE.Vector2(1.3, 1.3), roughness: 1 });
+  const rockGeo = (seed: number, r: number) => {
+    const g = new THREE.IcosahedronGeometry(r, 4);
+    const p = g.getAttribute('position') as THREE.BufferAttribute, v = new THREE.Vector3();
+    for (let k = 0; k < p.count; k++) {
+      v.fromBufferAttribute(p, k).normalize();
+      const f = 1 + (fbm2(v.x * 2.2 + seed, v.y * 2.2 + v.z * 1.7) - 0.5) * 0.7 + (fbm2(v.z * 6 + seed, v.x * 6, 2) - 0.5) * 0.12;
+      p.setXYZ(k, v.x * r * f, v.y * r * f * 0.78, v.z * r * f);
+    }
+    g.computeVertexNormals();
+    return g;
+  };
+  // Stones half-buried in the snow around the character.
+  for (let i = 0; i < (mobile ? 14 : 24); i++) {
+    const a = rand(i + 500) * Math.PI * 2, d = 4 + rand(i + 501) * 9;
+    const m = new THREE.Mesh(rockGeo(i, 0.25 + rand(i + 502) * 0.6), rockMat);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d * 0.8;
+    const r2 = x * x + z * z;
+    m.position.set(x, 1.8 * Math.exp(-r2 / 42) - 0.55 * Math.exp(-r2 / 6) - 0.65, z);
+    m.rotation.set(rand(i + 503), rand(i + 504) * 6, rand(i + 505));
+    m.castShadow = m.receiveShadow = true;
+    scene.add(m);
+  }
+
+  // Mountain ranges on the horizon: fog-coloured silhouettes that follow the camera.
+  const ranges: THREE.Mesh[] = [];
+  [[62, 9, 0xaab3bc, 0], [88, 15, 0xb8c0c8, 31]].forEach(([r, h, col, seed]) => {
+    const g = new THREE.CylinderGeometry(r, r, h, 360, 1, true);
+    const p = g.getAttribute('position') as THREE.BufferAttribute;
+    for (let k = 0; k < p.count; k++) {
+      if (p.getY(k) < 0) { p.setY(k, -h * 0.5 - 4); continue; }
+      const ang = Math.atan2(p.getZ(k), p.getX(k));
+      const ridge = Math.pow(fbm2(Math.cos(ang) * 4 + seed, Math.sin(ang) * 4, 6), 1.6);
+      p.setY(k, -h * 0.5 - 4 + h * (0.25 + ridge * 1.6));
+    }
+    g.computeVertexNormals();
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: col, fog: false, side: THREE.BackSide }));
+    m.renderOrder = -1;
+    scene.add(m); ranges.push(m);
+  });
+
+  // Shafts of light leaning through the fog, one cluster per scene.
+  const beamTex = makeBeam();
+  const beams: THREE.Sprite[] = [];
+  [0, -38, -78, -108, -138].forEach((z, j) => {
+    for (let i = 0; i < (mobile ? 2 : 3); i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: beamTex, color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      sp.position.set((rand(j * 7 + i) - 0.5) * 16, 7 + rand(j * 7 + i + 1) * 3, z - 6 - rand(j * 7 + i + 2) * 8);
+      sp.scale.set(2.2 + rand(j * 7 + i + 3) * 2.5, 16, 1);
+      sp.material.rotation = -0.38 + (rand(j * 7 + i + 4) - 0.5) * 0.2;
+      sp.userData.phase = rand(j * 7 + i + 5) * 6;
+      scene.add(sp); beams.push(sp);
+    }
+  });
 
   /* ---------- scenes 1–3: the character 学, lines → ice blocks → burst ---------- */
   const CELL = 0.28;
-  const blockMat = new THREE.ShaderMaterial({
-    uniforms: { uGlow: { value: 0 }, uFog: { value: FOG }, uNear: { value: 14 }, uFar: { value: 46 } },
-    vertexShader: BLOCK_VERT, fragmentShader: BLOCK_FRAG,
+  const blockMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe6edf3, roughness: 0.42, roughnessMap: surf.ice.rough, normalMap: surf.ice.normal, normalScale: new THREE.Vector2(0.7, 0.7),
+    clearcoat: 0.7, clearcoatRoughness: 0.25, emissive: 0xffffff, emissiveMap: makeSeamMap(), emissiveIntensity: 0,
   });
   let blocks: THREE.InstancedMesh | null = null;
+  let jitter: THREE.Vector3[] = [], jscale: number[] = [];
   let targets: THREE.Vector3[] = [], scatter: THREE.Vector3[] = [], burst: THREE.Vector3[] = [], spin: THREE.Vector3[] = [], delay: number[] = [];
   let lines: THREE.LineSegments | null = null;
   const charGroup = new THREE.Group(); charGroup.position.set(0, 1.25, 0); scene.add(charGroup);
@@ -166,9 +222,12 @@ function build(host: HTMLElement, onReady: () => void): Story {
     burst = targets.map((t, i) => new THREE.Vector3(t.x * 1.4 + (rand(i + 13) - 0.5) * 10, (rand(i + 14) - 0.3) * 9, -6 - rand(i + 15) * 26));
     spin = targets.map((_, i) => new THREE.Vector3(rand(i + 16) - 0.5, rand(i + 17) - 0.5, rand(i + 18) - 0.5).multiplyScalar(6));
     delay = targets.map((t, i) => (t.y + 2) * 0.02 + rand(i + 19) * 0.25);
-    const geo = new THREE.BoxGeometry(CELL * 0.94, CELL * 0.94, CELL * 1.6);
+    jitter = targets.map((_, i) => new THREE.Vector3(rand(i + 30) - 0.5, rand(i + 31) - 0.5, rand(i + 32) - 0.5).multiplyScalar(0.09));
+    jscale = targets.map((_, i) => 0.9 + rand(i + 33) * 0.12);
+    const geo = new RoundedBoxGeometry(CELL * 0.95, CELL * 0.95, CELL * 1.6, 3, CELL * 0.14);
     blocks = new THREE.InstancedMesh(geo, blockMat, n);
     blocks.frustumCulled = false;
+    blocks.castShadow = blocks.receiveShadow = true;
     charGroup.add(blocks);
     // Grid edges between neighbouring cells: the outline that draws itself first.
     const key = new Map(cells.map((c, i) => [`${c.x},${c.y}`, i]));
@@ -185,13 +244,9 @@ function build(host: HTMLElement, onReady: () => void): Story {
   });
 
   /* ---------- scene 3: floating ice rocks along the flight ---------- */
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0xe3e8ec, roughness: 0.75, flatShading: true, emissive: 0x7d8894, emissiveIntensity: 0.35 });
   const rocks: THREE.Mesh[] = [];
   for (let i = 0; i < (mobile ? 26 : 40); i++) {
-    const g = new THREE.IcosahedronGeometry(0.5 + rand(i + 40) * 1.6, 1);
-    const p = g.getAttribute('position') as THREE.BufferAttribute;
-    for (let k = 0; k < p.count; k++) { const f = 1 + (rand(i * 31 + k) - 0.5) * 0.45; p.setXYZ(k, p.getX(k) * f, p.getY(k) * f * 0.8, p.getZ(k) * f); }
-    g.computeVertexNormals();
+    const g = rockGeo(i + 100, 0.5 + rand(i + 40) * 1.6);
     const m = new THREE.Mesh(g, rockMat);
     const side = i % 2 ? 1 : -1;
     m.position.set(side * (1.8 + rand(i + 41) * 7), -1 + rand(i + 42) * 7, -14 - rand(i + 43) * 52);
@@ -202,20 +257,20 @@ function build(host: HTMLElement, onReady: () => void): Story {
 
   /* ---------- scene 4: eight ice segments in a ring ---------- */
   const ring = new THREE.Group(); ring.position.set(0, 2.4, -80); scene.add(ring);
-  const iceMat = new THREE.MeshPhysicalMaterial({ color: 0xeef3f7, roughness: 0.18, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.4, sheenColor: new THREE.Color(0xcfe9ff), flatShading: true, emissive: 0x9fb6cc, emissiveIntensity: 0.08 });
+  const iceMat = new THREE.MeshPhysicalMaterial({ color: 0xeef3f7, roughness: 0.18, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.4, sheenColor: new THREE.Color(0xcfe9ff), roughnessMap: surf.ice.rough, normalMap: surf.ice.normal, normalScale: new THREE.Vector2(0.5, 0.5), emissive: 0x9fb6cc, emissiveIntensity: 0.08 });
   const segs: THREE.Mesh[] = [];
   for (let i = 0; i < 8; i++) {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.42, 6, 10, (Math.PI * 2) / 8 * 0.78), iceMat);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.42, 16, 28, (Math.PI * 2) / 8 * 0.78), iceMat);
     m.rotation.z = (i / 8) * Math.PI * 2;
     ring.add(m); segs.push(m);
   }
-  const inner = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.16, 6, 48), iceMat); ring.add(inner);
+  const inner = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.16, 12, 96), iceMat); ring.add(inner);
 
   /* ---------- scene 5: the portal ---------- */
   const portal = new THREE.Group(); portal.position.set(0, 2.4, -110); scene.add(portal);
   for (let i = 0; i < 30; i++) {
     const a = (i / 30) * Math.PI * 2;
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7 + rand(i + 60) * 0.5, 0.9), iceMat);
+    const b = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.7 + rand(i + 60) * 0.5, 0.9, 2, 0.12), iceMat);
     b.position.set(Math.cos(a) * 3.1, Math.sin(a) * 3.1, (rand(i + 61) - 0.5) * 0.4);
     b.rotation.set(rand(i + 62) * 0.6, rand(i + 63) * 0.6, a);
     portal.add(b);
@@ -232,7 +287,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const fin = new THREE.Group(); fin.position.set(0, 0, -140); scene.add(fin);
   const plat = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.8, 0.35, 128), new THREE.MeshPhysicalMaterial({ color: 0xdfe4e9, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 }));
   plat.position.y = 0.1; fin.add(plat);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0xcfd5db, roughness: 1 }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0xcfd5db, roughness: 1, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.6, 0.6) }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.08; fin.add(floor);
   [5, 6.4, 8.2].forEach((r) => {
     const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.04, 96), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
@@ -335,6 +390,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
     lookCurve.getPoint(u, look);
     camera.position.x += mx * 0.6; camera.position.y -= my * 0.35;
     camera.lookAt(look);
+    (bokeh.uniforms as Record<string, THREE.IUniform>).focus.value = camera.position.distanceTo(look);
+    // Mountains only where there is ground under them: the hill and the final platform.
+    ranges.forEach((r) => { r.position.set(camera.position.x, 0, camera.position.z); r.visible = s < 0.46 || s > 0.84; });
+    beams.forEach((b) => { (b.material as THREE.SpriteMaterial).opacity = 0.11 + 0.06 * Math.sin(t * 0.35 + b.userData.phase); });
 
     // Scene 1–3: web, outline, blocks.
     webMat.opacity = 0.75 * (1 - ramp(s, 0.1, 0.18)) * ramp(s, 0, 0.03);
@@ -353,14 +412,14 @@ function build(host: HTMLElement, onReady: () => void): Story {
         if (out > 0) v3.lerp(burst[i], out);
         const hover = push * (1 - out);
         v3.x += (targets[i].x) * 0.25 * hover; v3.y += (targets[i].y - 3) * 0.25 * hover; v3.z += Math.sin(i) * 0.6 * hover;
-        e3.set(spin[i].x * (1 - a + out), spin[i].y * (1 - a + out) + (reduced ? 0 : t * 0.0), spin[i].z * (1 - a + out));
+        e3.set(spin[i].x * (1 - a + out) + jitter[i].x, spin[i].y * (1 - a + out) + jitter[i].y, spin[i].z * (1 - a + out) + jitter[i].z);
         q.setFromEuler(e3);
-        const k = a * (1 - ramp(s, 0.44, 0.5));
+        const k = a * (1 - ramp(s, 0.44, 0.5)) * jscale[i];
         sc.set(k, k, k);
         blocks.setMatrixAt(i, m4.compose(v3, q, k > 0.001 ? sc : one.clone().multiplyScalar(0.0001)));
       }
       blocks.instanceMatrix.needsUpdate = true;
-      blockMat.uniforms.uGlow.value = ramp(s, 0.13, 0.2) * (0.55 + 0.2 * Math.sin(t * 1.6)) + push * 0.4;
+      blockMat.emissiveIntensity = ramp(s, 0.13, 0.2) * (0.9 + 0.35 * Math.sin(t * 1.6)) + push * 0.8;
       blocks.visible = s < 0.5;
     }
     hill.visible = s < 0.5;
