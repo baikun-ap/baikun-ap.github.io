@@ -27,11 +27,11 @@
 - `src/landing/tex.ts`: процедурные текстуры (снег/лёд/камень, швы кирпичей, лучи) —
   сразу при старте и как запасной вариант.
 - `src/landing/materials.ts`: настоящие материалы. Загрузка сканов (`loadScan`/`applyScan`,
-  ImageBitmap — расшифровка вне главного потока, после события `load`), небо HDRI (`loadSky`),
+  ImageBitmap — расшифровка вне главного потока, после события `load`), небо HDRI (`loadSky`, из `sky.png`),
   свой шейдер льда `makeIce` (иней на трёх глубинах под поверхностью, синее тело, белая
   кромка, свет солнца насквозь) и снега `makeSnow` (искры инея на солнце, без искр в тени).
 - `public/tex/`: сканы Poly Haven CC0 (`snow_*`, `rock_*` — col/nor/arm, 1k и 2k webp),
-  `sky.hdr` (512×256), `CREDITS.txt`. Пересобрать: `python3 scripts/build-textures.py`.
+  `sky.png` (HDR 512×256 как RGBE в обычном PNG: любой хостинг и превью его отдают), `CREDITS.txt`. Пересобрать: `python3 scripts/build-textures.py`.
 - `src/landing/main.ts`: язык, подписи по прогрессу, эффект расшифровки (Anime.js).
 - `src/landing/style.css`: туман, тёмные моно-плашки.
 - Курс внутри: `src/course/ice.css` (светлая тема — морозный туман, тёмная — полярная ночь),

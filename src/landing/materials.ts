@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 
 /**
  * Real materials for the frozen world.
@@ -192,13 +191,39 @@ export function applyScan(mat: THREE.MeshStandardMaterial, s: ScanSet, repeat: n
   mat.needsUpdate = true;
 }
 
-/** The overcast winter sky as an environment map (pre-filtered for roughness). */
+/**
+ * The overcast winter sky as an environment map (pre-filtered for roughness).
+ * It ships as RGBE in a plain PNG (top half: RGB mantissas, bottom half: the
+ * shared exponent), read back exactly through a canvas into half floats.
+ */
 export function loadSky(renderer: THREE.WebGLRenderer) {
-  return new Promise<THREE.Texture>((res, rej) => new HDRLoader().load(`${BASE}sky.hdr`, (hdr) => {
-    hdr.mapping = THREE.EquirectangularReflectionMapping;
-    const pm = new THREE.PMREMGenerator(renderer);
-    const env = pm.fromEquirectangular(hdr).texture;
-    hdr.dispose(); pm.dispose();
-    res(env);
-  }, undefined, rej));
+  return new Promise<THREE.Texture>((res, rej) => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onerror = rej;
+    img.onload = () => {
+      try {
+        const W = img.naturalWidth, H = img.naturalHeight / 2;
+        const c = document.createElement('canvas'); c.width = W; c.height = H * 2;
+        const g = c.getContext('2d', { willReadFrequently: true })!;
+        g.drawImage(img, 0, 0);
+        const px = g.getImageData(0, 0, W, H * 2).data, data = new Uint16Array(W * H * 4);
+        for (let i = 0; i < W * H; i++) {
+          const f = Math.pow(2, px[(i + W * H) * 4] - 136);
+          for (let k = 0; k < 3; k++) data[i * 4 + k] = THREE.DataUtils.toHalfFloat(px[i * 4 + k] * f);
+          data[i * 4 + 3] = 0x3c00; // 1.0
+        }
+        const sky = new THREE.DataTexture(data, W, H, THREE.RGBAFormat, THREE.HalfFloatType);
+        sky.mapping = THREE.EquirectangularReflectionMapping;
+        sky.colorSpace = THREE.LinearSRGBColorSpace;
+        sky.magFilter = sky.minFilter = THREE.LinearFilter;
+        sky.flipY = true; sky.needsUpdate = true;
+        const pm = new THREE.PMREMGenerator(renderer);
+        const env = pm.fromEquirectangular(sky).texture;
+        sky.dispose(); pm.dispose();
+        res(env);
+      } catch (e) { rej(e); }
+    };
+    img.src = `${BASE}sky.png`;
+  });
 }
