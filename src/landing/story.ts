@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /**
  * The landing story, one long scroll through a frozen, foggy world:
@@ -85,7 +86,9 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = innerWidth <= 820;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.4 : 1.7));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 2.5 : 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.92;
   renderer.setSize(innerWidth, innerHeight);
   renderer.setClearColor(FOG, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -95,7 +98,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   scene.fog = new THREE.Fog(FOG, 14, 46);
   const camera = new THREE.PerspectiveCamera(mobile ? 60 : 46, innerWidth / innerHeight, 0.1, 140);
 
-  const composer = new EffectComposer(renderer);
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.4, 0.97);
   composer.addPass(bloom);
@@ -110,13 +113,16 @@ function build(host: HTMLElement, onReady: () => void): Story {
   });
   composer.addPass(grade);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x7f8a96, 1.5));
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.22;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x7f8a96, 1.1));
   const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-6, 10, 6); scene.add(sun);
 
   const rand = (s: number) => { const v = Math.sin(s * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
 
   /* ---------- scene 2: the snowy hill ---------- */
-  const hillGeo = new THREE.PlaneGeometry(70, 70, mobile ? 90 : 140, mobile ? 90 : 140);
+  const hillGeo = new THREE.PlaneGeometry(70, 70, 200, 200);
   hillGeo.rotateX(-Math.PI / 2);
   const hp = hillGeo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < hp.count; i++) {
@@ -127,7 +133,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
     hp.setY(i, mound + n - 1.2 + Math.max(0, (Math.abs(x) - 14)) * 0.35);
   }
   hillGeo.computeVertexNormals();
-  const hill = new THREE.Mesh(hillGeo, new THREE.MeshStandardMaterial({ color: 0xe7ebef, roughness: 0.95, flatShading: true }));
+  const hill = new THREE.Mesh(hillGeo, new THREE.MeshStandardMaterial({ color: 0xc9d0d7, roughness: 0.95, flatShading: true }));
   scene.add(hill);
 
   /* ---------- scenes 1–3: the character 学, lines → ice blocks → burst ---------- */
@@ -196,7 +202,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
 
   /* ---------- scene 4: eight ice segments in a ring ---------- */
   const ring = new THREE.Group(); ring.position.set(0, 2.4, -80); scene.add(ring);
-  const iceMat = new THREE.MeshStandardMaterial({ color: 0xe9eef3, roughness: 0.35, metalness: 0.05, flatShading: true, emissive: 0x9fb6cc, emissiveIntensity: 0.12 });
+  const iceMat = new THREE.MeshPhysicalMaterial({ color: 0xeef3f7, roughness: 0.18, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.4, sheenColor: new THREE.Color(0xcfe9ff), flatShading: true, emissive: 0x9fb6cc, emissiveIntensity: 0.08 });
   const segs: THREE.Mesh[] = [];
   for (let i = 0; i < 8; i++) {
     const m = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.42, 6, 10, (Math.PI * 2) / 8 * 0.78), iceMat);
@@ -224,7 +230,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
 
   /* ---------- scene 6: 开始 out of ice dust on a platform ---------- */
   const fin = new THREE.Group(); fin.position.set(0, 0, -140); scene.add(fin);
-  const plat = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.8, 0.35, 64), new THREE.MeshStandardMaterial({ color: 0xd7dde3, roughness: 0.6 }));
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.8, 0.35, 128), new THREE.MeshPhysicalMaterial({ color: 0xdfe4e9, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 }));
   plat.position.y = 0.1; fin.add(plat);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0xcfd5db, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.08; fin.add(floor);
@@ -301,17 +307,21 @@ function build(host: HTMLElement, onReady: () => void): Story {
   /* ---------- loop ---------- */
   let scrollP = 0, story = 0, intro = reduced ? 1 : 0, mx = 0, my = 0, tx = 0, ty = 0, ready = false;
   addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { tx = (e.clientX / innerWidth) * 2 - 1; ty = (e.clientY / innerHeight) * 2 - 1; } }, { passive: true });
-  addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
+  addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); composer.setPixelRatio(renderer.getPixelRatio()); });
 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e3 = new THREE.Euler(), v3 = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), sc = new THREE.Vector3();
   const look = new THREE.Vector3();
   const clock = new THREE.Clock();
+  // ?capture: frames advance only when a recorder calls __step(dt), for smooth offline video.
+  const capture = new URLSearchParams(location.search).has('capture');
+  let stepDt = 0, capT = 0;
+  if (capture) (window as unknown as { __step: (d: number) => void }).__step = (d: number) => { stepDt = d; capT += d; frame(); };
   const frame = () => {
-    requestAnimationFrame(frame);
-    if (document.hidden) return;
+    if (!capture) requestAnimationFrame(frame);
+    if (document.hidden && !capture) return;
     // Wall-clock time drives the intro and the scroll follow, so a slow device
     // is never held back; the clamped step drives the physical motion.
-    const real = clock.getDelta(), dt = Math.min(real, 0.05), t = clock.elapsedTime;
+    const real = capture ? stepDt : clock.getDelta(), dt = Math.min(real, 0.05), t = capture ? capT : clock.elapsedTime;
     if (intro < 1) intro = Math.min(1, intro + real / 3.6);
     const goal = 0.2 * ease(intro) + 0.8 * scrollP;
     story += (goal - story) * Math.min(1, real * 3.2);
