@@ -54,6 +54,9 @@
 `app/index.html#/`, опубликовать страницу и в `files` — `assets/*`, `fonts/*`,
 `icons/*`, `app/index.html` (старые хэш-файлы удалять значением `null`).
 Папку `strokes/` (1167 файлов) в превью не класть.
+Артефакты не отдают `.glb`: в превью класть `models/world-glb.wasm` (копия `world.glb`)
+и в собранном `assets/landing-*.js` заменить `world.glb` на `world-glb.wasm`; `models/ground-light.png` как есть.
+В репозитории всё остаётся `.glb`.
 
 ## Этапы
 
