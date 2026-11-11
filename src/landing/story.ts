@@ -10,6 +10,8 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { fbm2, makeBeam, makeSeamMap, makeSurfaces } from './tex';
 import { applyScan, loadGroundLight, loadScan, loadSky, loadWorld, makeDusted, makeIce, makeSnow, sunDir, tickMaterials, type World } from './materials';
 import { ROCKS, STONES, groundHeight, squeeze } from './shapes';
+import { installLayeredFog, makeWisps } from './fog';
+import { createSound } from './sound';
 
 /**
  * The landing story, one long scroll through a frozen, foggy world:
@@ -27,6 +29,11 @@ import { ROCKS, STONES, groundHeight, squeeze } from './shapes';
  * break off one at a time, each in a puff of snow dust; the eight segments fly
  * in and lock into the ring one by one; the portal flashes as the camera
  * passes through; snow keeps falling around the camera wherever it is.
+ *
+ * Atmosphere and sound (ICE-PLAN stage 4): layered fog (far wall, ground
+ * mist, drifting banks, fog.ts) with wisps of mist in the air; film grain;
+ * sound that follows the story (sound.ts): crunching ice, clinking ring
+ * segments, the portal's hum and boom, wind with the scroll speed.
  */
 
 export interface Story {
@@ -97,7 +104,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(FOG, 14, 46);
+  // Layered fog (fog.ts): its distances are built into the shader; the
+  // uniforms carry the wind time (near) and how thick the mist is (far).
+  const fog = new THREE.Fog(FOG, 0, 1);
+  scene.fog = fog;
   const camera = new THREE.PerspectiveCamera(mobile ? 60 : 46, innerWidth / innerHeight, 0.1, 140);
 
   // Glowing see-through things (light shafts, snow, dust) must stay out of the
@@ -129,13 +139,23 @@ function build(host: HTMLElement, onReady: () => void): Story {
   skipAiry(bokeh);
   composer.addPass(bokeh);
   const grade = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFlash: { value: 0 } },
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFlash: { value: 0 }, uGrain: { value: 0 }, uCell: { value: 1 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uFlash; varying vec2 vUv;
+    // Vignette, the portal flash, and film grain: a new grain pattern 24 times
+    // a second, cells about a CSS pixel big, strongest in the mid-tones (as on
+    // film), with a faint flicker of the whole frame.
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uFlash; uniform float uGrain; uniform float uCell; varying vec2 vUv;
       float h(vec2 p){ p = fract(p*vec2(123.34,345.45)); p += dot(p,p+34.345); return fract(p.x*p.y); }
       void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float d = length(vUv-0.5);
-        c *= mix(1.0, 0.82, smoothstep(0.35, 0.85, d)); c += (h(vUv*(uTime+1.0)*80.0)-0.5)*0.03;
+        c *= mix(1.0, 0.82, smoothstep(0.35, 0.85, d));
         c = mix(c, vec3(1.0, 1.0, 1.02), uFlash * (0.85 - 0.35 * d));
+        vec2 cell = floor(gl_FragCoord.xy / uCell); float f = uGrain;
+        vec2 o = vec2(fract(f * 0.1373) * 913.0, fract(f * 0.2917) * 577.0);
+        float g = (h(cell + o) + h(cell * 1.37 + o.yx + 11.0)) - 1.0;
+        float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+        float mid = 1.0 - 0.65 * pow(abs(clamp(lum, 0.0, 1.0) * 2.0 - 1.0), 2.0);
+        c += g * 0.042 * mid;
+        c *= 1.0 + (h(vec2(f, 3.7)) - 0.5) * 0.012;
         gl_FragColor = vec4(c, 1.0); }`,
   });
   composer.addPass(grade);
@@ -165,6 +185,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03; sun.shadow.radius = 4;
   scene.add(sun, sun.target);
   sunDir.value.copy(sun.position).sub(sun.target.position).normalize();
+  installLayeredFog(sunDir.value);
   // Photo-scanned snow and rock stream in after the first frames (2k on computers).
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const big = !mobile && Math.min(screen.width, screen.height) * devicePixelRatio >= 1000;
@@ -299,6 +320,21 @@ function build(host: HTMLElement, onReady: () => void): Story {
       scene.add(sp); beams.push(sp); airy.push(sp);
     }
   });
+
+  // Wisps of mist along the flight: low over the snow behind and beside 学
+  // (never in front of it), between the floating rocks, round the ring and
+  // the portal (clear of their middles), low over the final platform.
+  const mist = makeWisps(mobile ? 16 : 28, (i) => {
+    const z = 4 - rand(i + 310) * 150, side = rand(i + 311) < 0.5 ? -1 : 1;
+    let x = side * (1.5 + rand(i + 312) * 9), y: number;
+    if (z > -40) {
+      if (z > -2) x = side * (4.5 + rand(i + 312) * 7);
+      y = groundHeight(x, z) + 1.5 + rand(i + 313) * 1.4;
+    } else if (z < -124) y = 1 + rand(i + 313) * 0.8;
+    else { if (Math.abs(z + 80) < 8 || Math.abs(z + 110) < 8) x = side * (4.5 + rand(i + 312) * 6); y = -0.5 + rand(i + 313) * 6; }
+    return new THREE.Vector3(x, y, z);
+  }, rand);
+  mist.wisps.forEach((w) => { scene.add(w); airy.push(w); });
 
   /* ---------- scenes 1–3: the character 学, lines → ice blocks → burst ---------- */
   const CELL = 0.28;
@@ -468,7 +504,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const coreN = mobile ? 500 : 900, cp = new Float32Array(coreN * 3);
   for (let i = 0; i < coreN; i++) { const a = rand(i + 70) * 6.283, r = Math.pow(rand(i + 71), 0.6) * 2.6; cp[i * 3] = Math.cos(a) * r; cp[i * 3 + 1] = Math.sin(a) * r; cp[i * 3 + 2] = (rand(i + 72) - 0.5) * 0.8; }
   const coreGeo = new THREE.BufferGeometry(); coreGeo.setAttribute('position', new THREE.BufferAttribute(cp, 3));
-  const coreMat = new THREE.PointsMaterial({ color: new THREE.Color(1.15, 1.2, 1.28), size: 0.045, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+  const coreMat = new THREE.PointsMaterial({ color: new THREE.Color(1.15, 1.2, 1.28), size: 0.045, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
   const core = new THREE.Points(coreGeo, coreMat);
   portal.add(core); airy.push(core);
   const portalLight = new THREE.PointLight(0xdaf0ff, 6, 9); portal.add(portalLight);
@@ -500,7 +536,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
       dustFrom.set([(rand(i + 81) - 0.5) * 18, rand(i + 82) * 9 - 1, (rand(i + 83) - 0.5) * 12], i * 3);
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(dustFrom.slice(), 3));
-    dust = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: mobile ? 0.06 : 0.05, transparent: true, depthWrite: false }));
+    // Glowing dust is light, not a thing in the mist: no fog on it (nor on the portal core).
+    dust = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: mobile ? 0.06 : 0.05, transparent: true, depthWrite: false, fog: false }));
     fin.add(dust); airy.push(dust);
   });
 
@@ -599,37 +636,14 @@ function build(host: HTMLElement, onReady: () => void): Story {
   };
   const baseFov = camera.fov, feel = new THREE.Vector3(), fwd = new THREE.Vector3(), buf = new THREE.Vector2();
 
-  /* ---------- wind ---------- */
-  let audio: { ctx: AudioContext; master: GainNode; lp: BiquadFilterNode } | null = null, soundOn = false;
-  const ensureAudio = () => {
-    if (audio) return audio;
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx(), master = ctx.createGain(), lp = ctx.createBiquadFilter();
-    master.gain.value = 0; lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master); master.connect(ctx.destination);
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), ch = buf.getChannelData(0);
-    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource(); noise.buffer = buf; noise.loop = true;
-    const band = ctx.createBiquadFilter(); band.type = 'bandpass'; band.frequency.value = 480; band.Q.value = 0.6;
-    const wob = ctx.createOscillator(), wg = ctx.createGain(); wob.frequency.value = 0.08; wg.gain.value = 240; wob.connect(wg); wg.connect(band.frequency);
-    const ng = ctx.createGain(); ng.gain.value = 0.06; noise.connect(band); band.connect(ng); ng.connect(lp);
-    [146.8, 220, 329.6].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; o.detune.value = i * 5 - 5; g.gain.value = 0.01; o.connect(g); g.connect(lp); o.start(); });
-    noise.start(); wob.start();
-    return (audio = { ctx, master, lp });
-  };
+  /* ---------- sound (sound.ts) ---------- */
+  const sound = createSound();
   let pushGoal = 0, push = 0;
-  const applyAudio = () => {
-    if (!audio) return;
-    const now = audio.ctx.currentTime, muffled = pushGoal > 0.5;
-    audio.master.gain.cancelScheduledValues(now); audio.master.gain.setValueAtTime(audio.master.gain.value, now);
-    audio.master.gain.linearRampToValueAtTime(soundOn ? (muffled ? 0.35 : 0.8) : 0, now + 1);
-    audio.lp.frequency.cancelScheduledValues(now); audio.lp.frequency.setValueAtTime(audio.lp.frequency.value, now);
-    audio.lp.frequency.linearRampToValueAtTime(muffled ? 280 : 900, now + 1);
-  };
 
   /* ---------- loop ---------- */
   let scrollP = 0, story = 0, intro = reduced ? 1 : 0, mx = 0, my = 0, tx = 0, ty = 0, ready = false;
   // The portal flash: the time the camera last passed through it going forward.
-  let flashT = -1, flash = 0, prevZ = Infinity;
+  let flashT = -1, flash = 0, prevZ = Infinity, prevS = 0;
   addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { tx = (e.clientX / innerWidth) * 2 - 1; ty = (e.clientY / innerHeight) * 2 - 1; } }, { passive: true });
   addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); composer.setPixelRatio(renderer.getPixelRatio()); });
 
@@ -651,6 +665,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
     const goal = 0.2 * ease(intro) + 0.8 * scrollP;
     story += (goal - story) * Math.min(1, real * 3.2);
     const s = story;
+    const speed = real > 0 ? (s - prevS) / real : 0;
+    prevS = s;
     push += (pushGoal - push) * Math.min(1, dt * 3);
     flash = flashT >= 0 && !reduced ? Math.exp(-(t - flashT) * 2.6) : 0;
     mx += (tx - mx) * dt * 2; my += (ty - my) * dt * 2;
@@ -689,6 +705,9 @@ function build(host: HTMLElement, onReady: () => void): Story {
     // Mountains only where there is ground under them: the hill and the final platform.
     ranges.forEach((r) => { r.position.set(camera.position.x, 0, camera.position.z); r.visible = s < 0.46 || s > 0.84; });
     beams.forEach((b) => { (b.material as THREE.SpriteMaterial).opacity = 0.11 + 0.06 * Math.sin(t * 0.35 + b.userData.phase); });
+    // The fog's wind time, and the wisps drifting with it.
+    fog.near = reduced ? 0 : t;
+    mist.tick(t, camera.position, !reduced);
 
     // Scene 1–3: web, outline, blocks.
     webMat.opacity = 0.75 * (1 - ramp(s, 0.1, 0.18)) * ramp(s, 0, 0.03);
@@ -700,6 +719,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
       lines.visible = s < 0.2;
     }
     if (brickSets.length) {
+      let broke = 0;
       for (const { mesh, ids } of brickSets) for (let j = 0; j < ids.length; j++) {
         const i = ids[j];
         const a = ease(ramp(s, 0.06 + delay[i] * 0.25, 0.15 + delay[i] * 0.25));
@@ -708,7 +728,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
         // snow dust, pops out towards the camera and arcs away down the flight.
         // It keeps drifting a little on its own even if the scroll stops.
         const d = detachAt[i];
-        if (s >= d && detachT[i] < 0) { detachT[i] = t; markDust(i, t); }
+        if (s >= d && detachT[i] < 0) { detachT[i] = t; markDust(i, t); broke++; }
         else if (s < d && detachT[i] >= 0) { detachT[i] = -1; markDust(i, -1); }
         let f = ramp(s, d, d + 0.075);
         if (detachT[i] >= 0 && !reduced) f = Math.max(f, 0.3 * (1 - Math.exp(-(t - detachT[i]) * 1.8)));
@@ -731,6 +751,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
       blockMat.emissiveIntensity = ramp(s, 0.13, 0.2) * (0.9 + 0.35 * Math.sin(t * 1.6)) + push * 0.8;
       for (const { mesh } of brickSets) { mesh.instanceMatrix.needsUpdate = true; mesh.visible = s < 0.5; }
       if (dustBirth && dustDirty) { dustBirth.needsUpdate = true; dustDirty = false; }
+      if (broke) sound.crunch(broke);
     }
     hill.visible = s < 0.5;
     finGround.forEach((o) => { o.visible = s > 0.78; });
@@ -745,17 +766,17 @@ function build(host: HTMLElement, onReady: () => void): Story {
       const r = ramp(s, 0.49 + i * 0.0145, 0.518 + i * 0.0145), e = easeBack(r), k = 1 - e;
       m.position.copy(segFrom[i]).multiplyScalar(k);
       m.rotation.x = segTurn[i].x * k; m.rotation.y = segTurn[i].y * k;
-      if (r >= 1 && segLock[i] < 0) segLock[i] = t; else if (r < 1) segLock[i] = -1;
+      if (r >= 1 && segLock[i] < 0) { segLock[i] = t; sound.clink(i); } else if (r < 1) segLock[i] = -1;
       m.material.emissiveIntensity = 0.08 + (segLock[i] >= 0 && !reduced ? 1.5 * Math.exp(-(t - segLock[i]) * 3) : 0);
     });
     const ir = ramp(s, 0.6, 0.635);
     inner.scale.setScalar(Math.max(0.0001, easeBack(ir)));
-    if (ir >= 1 && innerLock < 0) innerLock = t; else if (ir < 1) innerLock = -1;
+    if (ir >= 1 && innerLock < 0) { innerLock = t; sound.clink(8); } else if (ir < 1) innerLock = -1;
     inner.material.emissiveIntensity = 0.08 + (innerLock >= 0 && !reduced ? 1.2 * Math.exp(-(t - innerLock) * 2.5) : 0);
     inner.rotation.y = t * 0.6;
     // Scene 5: the portal breathes; its core spins faster as the camera
     // comes near, and flashes white when the camera passes through.
-    if (prevZ > portal.position.z && pathZ <= portal.position.z && Number.isFinite(prevZ)) flashT = t;
+    if (prevZ > portal.position.z && pathZ <= portal.position.z && Number.isFinite(prevZ)) { flashT = t; sound.boom(); }
     prevZ = pathZ;
     const pd = Math.abs(camera.position.z - portal.position.z);
     const near = pathZ > portal.position.z ? clamp01(1 - (pd - 1) / 12) : 0;
@@ -769,6 +790,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
     grade.uniforms.uFlash.value = flash;
     // Fade the core as the camera flies through it, so it never floods the screen.
     coreMat.opacity = 0.9 * clamp01((pd - 2) / 6);
+    // The portal hums louder the nearer the camera is, and dies away behind it.
+    sound.update(speed, pathZ > portal.position.z ? clamp01(1 - (pd - 2) / 34) : clamp01(1 - pd / 10) * 0.5);
     // Scene 6: dust gathers into 开始.
     if (dust && dustHome && dustFrom) {
       const g = ease(ramp(s, 0.8, 0.95));
@@ -784,6 +807,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
     }
 
     grade.uniforms.uTime.value = t;
+    grade.uniforms.uGrain.value = reduced ? 1 : Math.floor(t * 24);
+    grade.uniforms.uCell.value = Math.max(1, renderer.getPixelRatio() * 0.75);
     tickMaterials(t);
     composer.render();
     if (!ready && (settled || t > 3) && t > 0.15) { ready = true; onReady(); }
@@ -793,10 +818,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   return {
     setScroll(p) { scrollP = clamp01(p); },
     progress: () => story,
-    hover(on) { pushGoal = on && !reduced ? 1 : 0; applyAudio(); },
-    toggleSound() {
-      try { const a = ensureAudio(); if (a.ctx.state === 'suspended') void a.ctx.resume(); soundOn = !soundOn; applyAudio(); } catch { soundOn = false; }
-      return soundOn;
-    },
+    hover(on) { pushGoal = on && !reduced ? 1 : 0; sound.muffle(on); },
+    toggleSound: () => sound.toggle(),
   };
 }
