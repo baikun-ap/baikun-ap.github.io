@@ -8,7 +8,8 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { fbm2, makeBeam, makeSeamMap, makeSurfaces } from './tex';
-import { applyScan, loadScan, loadSky, makeIce, makeSnow, sunDir, tickMaterials } from './materials';
+import { applyScan, loadGroundLight, loadScan, loadSky, loadWorld, makeDusted, makeIce, makeSnow, sunDir, tickMaterials, type World } from './materials';
+import { ROCKS, STONES, groundHeight, squeeze } from './shapes';
 
 /**
  * The landing story, one long scroll through a frozen, foggy world:
@@ -149,28 +150,65 @@ function build(host: HTMLElement, onReady: () => void): Story {
 
   const rand = (s: number) => { const v = Math.sin(s * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
 
+  // Modelled bricks and rocks with baked occlusion, and the hill's baked light
+  // (scripts/build-models.mjs), fetched at once. The story waits for them (at
+  // most 2.5 s) so nothing changes shape on screen; procedural shapes stand in
+  // if they do not come.
+  const wait = new Promise<void>((r) => setTimeout(r, 2500));
+  let late = false;
+  void wait.then(() => { late = true; });
+  const worldP: Promise<World | null> = Promise.race([
+    loadWorld().catch((e) => { console.warn('[story] models', e); return null; }),
+    wait.then(() => null),
+  ]);
+  const bakedLight = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) as THREE.Texture };
+  bakedLight.value.needsUpdate = true;
+  const lightP: Promise<boolean> = Promise.race([
+    loadGroundLight().then((t) => { if (late) { t.dispose(); return false; } bakedLight.value = t; return true; }, (e) => { console.warn('[story] light', e); return false; }),
+    wait.then(() => false),
+  ]);
+  let settled = false;
+  /** All vertices white: procedural stand-ins for the models' baked occlusion. */
+  const white = (g: THREE.BufferGeometry) => g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(g.getAttribute('position').count * 3).fill(1), 3));
+  /** A modelled rock with its own texture placement (shares the vertex data). */
+  const rockFor = (src: THREE.BufferGeometry, size: number, seed: number) => {
+    const g = new THREE.BufferGeometry();
+    (['position', 'normal', 'color'] as const).forEach((n) => g.setAttribute(n, src.getAttribute(n)));
+    g.setIndex(src.index);
+    const u0 = src.getAttribute('uv'), uv = new Float32Array(u0.count * 2);
+    // Stored as 0..1 over -1.6..1.6 m of the unit rock; scans tile every 1/0.45 m.
+    for (let i = 0; i < u0.count; i++) { uv[i * 2] = (u0.getX(i) * 3.2 - 1.6) * size * 0.45 + seed * 0.37; uv[i * 2 + 1] = (u0.getY(i) * 3.2 - 1.6) * size * 0.45 + seed * 0.11; }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    if (!src.boundingSphere) src.computeBoundingSphere();
+    g.boundingSphere = src.boundingSphere;
+    return g;
+  };
+
   /* ---------- scene 2: the snowy hill ---------- */
+  // The relief (swells, wind ridges, drifts piled against the stones) comes
+  // from shapes.ts, the same code the light was baked from; the grid is
+  // squeezed so it is densest around the character.
   const hillGeo = new THREE.PlaneGeometry(80, 80, mobile ? 170 : 240, mobile ? 170 : 240);
   hillGeo.rotateX(-Math.PI / 2);
-  const hp = hillGeo.getAttribute('position') as THREE.BufferAttribute;
+  const hp = hillGeo.getAttribute('position') as THREE.BufferAttribute, huv = hillGeo.getAttribute('uv') as THREE.BufferAttribute;
   for (let i = 0; i < hp.count; i++) {
-    const x = hp.getX(i), z = hp.getZ(i);
-    const r2 = x * x + z * z;
-    const mound = 1.8 * Math.exp(-r2 / 42) - 0.55 * Math.exp(-r2 / 6) + 0.6;
-    // Broad swells, wind ridges and small lumps of packed snow.
-    const n = (fbm2(x * 0.12 + 7, z * 0.12) - 0.5) * 1.6 + (fbm2(x * 0.55, z * 0.55 + 3, 3) - 0.5) * 0.35 + Math.pow(Math.abs(Math.sin(x * 0.35 + z * 0.9 + fbm2(x * 0.2, z * 0.2) * 3)), 6) * 0.12;
-    hp.setY(i, mound + n - 1.2 + Math.max(0, Math.abs(x) - 13) * 0.4);
+    const x = squeeze(hp.getX(i)), z = squeeze(hp.getZ(i));
+    hp.setXYZ(i, x, groundHeight(x, z), z);
+    huv.setXY(i, (x + 40) / 80, (40 - z) / 80);
   }
   hillGeo.computeVertexNormals();
   [surf.snow.normal, surf.snow.rough].forEach((t) => t.repeat.set(14, 14));
   const hillMat = new THREE.MeshStandardMaterial({ color: 0xd4dae0, roughness: 1, roughnessMap: surf.snow.rough, normalMap: surf.snow.normal, normalScale: new THREE.Vector2(0.9, 0.9) });
-  makeSnow(hillMat, mobile ? 2.2 : 3);
+  makeSnow(hillMat, mobile ? 2.2 : 3, bakedLight);
   const hill = new THREE.Mesh(hillGeo, hillMat);
   hill.receiveShadow = true;
   scene.add(hill);
 
   // Rock material (scattered stones, floating rocks): cracked and normal-mapped.
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0xb9c1c9, map: surf.rock.color, roughnessMap: surf.rock.rough, normalMap: surf.rock.normal, normalScale: new THREE.Vector2(1.3, 1.3), roughness: 1 });
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0xb9c1c9, map: surf.rock.color, roughnessMap: surf.rock.rough, normalMap: surf.rock.normal, normalScale: new THREE.Vector2(1.3, 1.3), roughness: 1, vertexColors: true });
+  // Stones in the snow carry snow on their tops.
+  const stoneMat = rockMat.clone();
+  makeDusted(stoneMat);
   const rockGeo = (seed: number, r: number) => {
     const g = new THREE.IcosahedronGeometry(r, 4);
     const p = g.getAttribute('position') as THREE.BufferAttribute, v = new THREE.Vector3();
@@ -180,6 +218,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
       p.setXYZ(k, v.x * r * f, v.y * r * f * 0.78, v.z * r * f);
     }
     g.computeVertexNormals();
+    white(g);
     // Box-projected UVs per triangle (by its facing), so the scanned rock keeps
     // the same texel size on every stone and never pinches at a pole.
     const uv = g.getAttribute('uv') as THREE.BufferAttribute, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
@@ -195,17 +234,19 @@ function build(host: HTMLElement, onReady: () => void): Story {
     }
     return g;
   };
-  // Stones half-buried in the snow around the character.
-  for (let i = 0; i < (mobile ? 14 : 24); i++) {
-    const a = rand(i + 500) * Math.PI * 2, d = 4 + rand(i + 501) * 9;
-    const m = new THREE.Mesh(rockGeo(i, 0.25 + rand(i + 502) * 0.6), rockMat);
-    const x = Math.cos(a) * d, z = Math.sin(a) * d * 0.8;
-    const r2 = x * x + z * z;
-    m.position.set(x, 1.8 * Math.exp(-r2 / 42) - 0.55 * Math.exp(-r2 / 6) - 0.65, z);
-    m.rotation.set(rand(i + 503), rand(i + 504) * 6, rand(i + 505));
-    m.castShadow = m.receiveShadow = true;
-    scene.add(m);
-  }
+  // Stones half-buried in the drifts around the character and rock outcrops on
+  // the flanks. Their sun shadows and contact shade are baked into the hill, so
+  // they stay out of the live shadow map (unless the baked light is missing).
+  const placeStones = (world: World | null, baked: boolean) => {
+    STONES.forEach((s, i) => {
+      const m = new THREE.Mesh(world ? rockFor(world.rocks[s.v], s.r, i) : rockGeo(i, 1), stoneMat);
+      m.position.set(s.x, s.y, s.z);
+      m.rotation.set(s.rx, s.ry, s.rz);
+      m.scale.set(s.sx, s.sy * (world ? 1 : 1.28), s.sz);
+      m.castShadow = !baked; m.receiveShadow = true;
+      scene.add(m);
+    });
+  };
 
   // Mountain ranges on the horizon: fog-coloured silhouettes that follow the camera.
   const ranges: THREE.Mesh[] = [];
@@ -245,7 +286,9 @@ function build(host: HTMLElement, onReady: () => void): Story {
     clearcoat: 0.7, clearcoatRoughness: 0.25, emissive: 0xffffff, emissiveMap: makeSeamMap(), emissiveIntensity: 0,
   });
   makeIce(blockMat, { deep: 0x6f9cc4, glow: 0xe4f4ff, depth: 0.6, scale: 7 });
-  let blocks: THREE.InstancedMesh | null = null;
+  blockMat.vertexColors = true;
+  /** One instanced mesh per brick model; ids: which cells of 学 it draws. */
+  let brickSets: { mesh: THREE.InstancedMesh; ids: number[] }[] = [];
   let jitter: THREE.Vector3[] = [], jscale: number[] = [];
   let targets: THREE.Vector3[] = [], scatter: THREE.Vector3[] = [], burst: THREE.Vector3[] = [], spin: THREE.Vector3[] = [], delay: number[] = [];
   let lines: THREE.LineSegments | null = null;
@@ -262,21 +305,27 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const webMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false });
   const web = new THREE.LineSegments(webGeo, webMat); web.position.y = 1.2; scene.add(web);
 
-  glyphCells('学', 120, 120, 5).then((cells) => {
+  void Promise.all([glyphCells('学', 120, 120, 5), worldP, lightP]).then(([cells, world, baked]) => {
+    placeStones(world, baked);
+    placeRocks(world);
     const s = CELL / 5;
     targets = cells.map((c) => new THREE.Vector3(c.x * s, c.y * s + 3.6, (rand(c.x * 3 + c.y) - 0.5) * 0.06));
-    const n = targets.length;
     scatter = targets.map((t, i) => t.clone().add(new THREE.Vector3((rand(i + 10) - 0.5) * 14, (rand(i + 11) - 0.2) * 9, (rand(i + 12) - 0.5) * 10)));
     burst = targets.map((t, i) => new THREE.Vector3(t.x * 1.4 + (rand(i + 13) - 0.5) * 10, (rand(i + 14) - 0.3) * 9, -6 - rand(i + 15) * 26));
     spin = targets.map((_, i) => new THREE.Vector3(rand(i + 16) - 0.5, rand(i + 17) - 0.5, rand(i + 18) - 0.5).multiplyScalar(6));
     delay = targets.map((t, i) => (t.y + 2) * 0.02 + rand(i + 19) * 0.25);
     jitter = targets.map((_, i) => new THREE.Vector3(rand(i + 30) - 0.5, rand(i + 31) - 0.5, rand(i + 32) - 0.5).multiplyScalar(0.09));
     jscale = targets.map((_, i) => 0.9 + rand(i + 33) * 0.12);
-    const geo = new RoundedBoxGeometry(CELL * 0.95, CELL * 0.95, CELL * 1.6, 3, CELL * 0.14);
-    blocks = new THREE.InstancedMesh(geo, blockMat, n);
-    blocks.frustumCulled = false;
-    blocks.castShadow = blocks.receiveShadow = true;
-    charGroup.add(blocks);
+    const geos = world ? world.bricks : [white(new RoundedBoxGeometry(CELL * 0.95, CELL * 0.95, CELL * 1.6, 3, CELL * 0.14))];
+    brickSets = geos.map((g, k) => {
+      const ids = targets.map((_, i) => i).filter((i) => Math.floor(rand(i + 77) * geos.length) === k);
+      const mesh = new THREE.InstancedMesh(g, blockMat, Math.max(1, ids.length));
+      mesh.count = ids.length;
+      mesh.frustumCulled = false;
+      mesh.castShadow = mesh.receiveShadow = true;
+      charGroup.add(mesh);
+      return { mesh, ids };
+    });
     // Grid edges between neighbouring cells: the outline that draws itself first.
     const key = new Map(cells.map((c, i) => [`${c.x},${c.y}`, i]));
     const seg: number[] = [];
@@ -289,19 +338,21 @@ function build(host: HTMLElement, onReady: () => void): Story {
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
     lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false }));
     charGroup.add(lines);
-  });
+    settled = true;
+  }).catch((e) => { console.error('[story] 学', e); settled = true; });
 
   /* ---------- scene 3: floating ice rocks along the flight ---------- */
   const rocks: THREE.Mesh[] = [];
-  for (let i = 0; i < (mobile ? 26 : 40); i++) {
-    const g = rockGeo(i + 100, 0.5 + rand(i + 40) * 1.6);
-    const m = new THREE.Mesh(g, rockMat);
+  const placeRocks = (world: World | null) => { for (let i = 0; i < (mobile ? 26 : 40); i++) {
+    const r = 0.5 + rand(i + 40) * 1.6;
+    const m = new THREE.Mesh(world ? rockFor(world.rocks[(i * 5 + 3) % ROCKS], r, i + 100) : rockGeo(i + 100, r), rockMat);
+    if (world) m.scale.set(r, r * 0.78, r);
     const side = i % 2 ? 1 : -1;
     m.position.set(side * (1.8 + rand(i + 41) * 7), -1 + rand(i + 42) * 7, -14 - rand(i + 43) * 52);
     m.rotation.set(rand(i + 44) * 6, rand(i + 45) * 6, 0);
     m.userData.spin = (rand(i + 46) - 0.5) * 0.3;
     scene.add(m); rocks.push(m);
-  }
+  } };
 
   /* ---------- scene 4: eight ice segments in a ring ---------- */
   const ring = new THREE.Group(); ring.position.set(0, 2.4, -80); scene.add(ring);
@@ -369,7 +420,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
       floorMat.normalScale.set(0.5, 0.5); applyScan(floorMat, { col: s.col.clone(), nor: s.nor.clone(), arm: s.arm.clone() }, 16, 0.35); floorMat.color.set(0xeaeef2);
     }).catch((e) => console.warn('[story] snow', e));
     loadScan('rock', big, aniso).then((s) => {
-      rockMat.normalScale.set(1.1, 1.1); applyScan(rockMat, s, 1, 0.6); rockMat.color.set(0xd3dae1);
+      for (const m of [rockMat, stoneMat]) { m.normalScale.set(1.1, 1.1); applyScan(m, s, 1, 0.6); m.color.set(0xd3dae1); }
     }).catch((e) => console.warn('[story] rock', e));
   };
   if (!rich) { /* procedural maps only */ } else if (document.readyState === 'complete') scans(); else addEventListener('load', scans, { once: true });
@@ -445,7 +496,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
     // Wall-clock time drives the intro and the scroll follow, so a slow device
     // is never held back; the clamped step drives the physical motion.
     const real = capture ? stepDt : clock.getDelta(), dt = Math.min(real, 0.05), t = capture ? capT : clock.elapsedTime;
-    if (intro < 1) intro = Math.min(1, intro + real / 3.6);
+    // The intro starts once the models are in (or given up on).
+    if (intro < 1 && (settled || t > 3)) intro = Math.min(1, intro + real / 3.6);
     const goal = 0.2 * ease(intro) + 0.8 * scrollP;
     story += (goal - story) * Math.min(1, real * 3.2);
     const s = story;
@@ -472,9 +524,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
       (lines.material as THREE.LineBasicMaterial).opacity = 1 - ramp(s, 0.13, 0.19);
       lines.visible = s < 0.2;
     }
-    if (blocks) {
+    if (brickSets.length) {
       const settle = s, out = ease(ramp(s, 0.31, 0.47));
-      for (let i = 0; i < targets.length; i++) {
+      for (const { mesh, ids } of brickSets) for (let j = 0; j < ids.length; j++) {
+        const i = ids[j];
         const a = ease(ramp(settle, 0.06 + delay[i] * 0.25, 0.15 + delay[i] * 0.25));
         v3.copy(scatter[i]).lerp(targets[i], a);
         if (out > 0) v3.lerp(burst[i], out);
@@ -484,11 +537,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
         q.setFromEuler(e3);
         const k = a * (1 - ramp(s, 0.44, 0.5)) * jscale[i];
         sc.set(k, k, k);
-        blocks.setMatrixAt(i, m4.compose(v3, q, k > 0.001 ? sc : one.clone().multiplyScalar(0.0001)));
+        mesh.setMatrixAt(j, m4.compose(v3, q, k > 0.001 ? sc : one.clone().multiplyScalar(0.0001)));
       }
-      blocks.instanceMatrix.needsUpdate = true;
       blockMat.emissiveIntensity = ramp(s, 0.13, 0.2) * (0.9 + 0.35 * Math.sin(t * 1.6)) + push * 0.8;
-      blocks.visible = s < 0.5;
+      for (const { mesh } of brickSets) { mesh.instanceMatrix.needsUpdate = true; mesh.visible = s < 0.5; }
     }
     hill.visible = s < 0.5;
 
@@ -523,7 +575,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
     grade.uniforms.uTime.value = t;
     tickMaterials(t);
     composer.render();
-    if (!ready && t > 0.15) { ready = true; onReady(); }
+    if (!ready && (settled || t > 3) && t > 0.15) { ready = true; onReady(); }
   };
   frame();
 

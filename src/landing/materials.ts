@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { BAKE_RECT, BRICKS, ROCKS } from './shapes';
 
 /**
  * Real materials for the frozen world.
@@ -15,6 +18,7 @@ import * as THREE from 'three';
  */
 
 const BASE = import.meta.env.BASE_URL + 'tex/';
+const MODELS = import.meta.env.BASE_URL + 'models/';
 
 /** World direction towards the sun, shared by every patched material. */
 export const sunDir = { value: new THREE.Vector3(-7, 13, 9).normalize() };
@@ -110,13 +114,30 @@ export function makeIce(mat: THREE.MeshPhysicalMaterial, look: IceLook) {
  * random facet; a crystal flashes when its facet mirrors the sun into the eye.
  * Shadowed snow does not sparkle. Also breaks up the tiling with soft drifts.
  */
-export function makeSnow(mat: THREE.MeshStandardMaterial, strength: number) {
-  const u = { uSparkle: { value: strength } };
+export function makeSnow(mat: THREE.MeshStandardMaterial, strength: number, baked?: { value: THREE.Texture }) {
+  const u = { uSparkle: { value: strength }, uBaked: baked ?? { value: null }, uBakedRect: { value: new THREE.Vector3(...BAKE_RECT) } };
   mat.onBeforeCompile = (shader) => {
     addPositions(shader);
     Object.assign(shader.uniforms, u);
+    if (baked) shader.defines = { ...shader.defines, BK_BAKED: '' };
     shader.fragmentShader = shader.fragmentShader
-      .replace('uniform vec3 uSun;', 'uniform vec3 uSun;\nuniform float uSparkle;')
+      .replace('uniform vec3 uSun;', 'uniform vec3 uSun;\nuniform float uSparkle;\nuniform sampler2D uBaked;\nuniform vec3 uBakedRect;')
+      // Baked light (scripts/build-models.mjs): the sky's occlusion dims the
+      // ambient light, the stones' sun shadows dim the sunlight; it fades out
+      // towards the edges of the baked square.
+      .replace('#include <aomap_fragment>', `
+        #ifdef BK_BAKED
+        {
+          vec2 bu = (vIceW.xz - uBakedRect.xy) / uBakedRect.z;
+          vec2 bd = min(bu, 1.0 - bu);
+          float bw = smoothstep(0.0, 0.06, min(bd.x, bd.y));
+          vec3 bk = texture2D(uBaked, bu).rgb;
+          float bao = mix(1.0, 0.4 + 0.6 * bk.r, bw), bsh = mix(1.0, bk.g, bw);
+          reflectedLight.indirectDiffuse *= bao; reflectedLight.indirectSpecular *= bao;
+          reflectedLight.directDiffuse *= bsh * mix(1.0, bao, 0.2); reflectedLight.directSpecular *= bsh;
+        }
+        #endif
+        #include <aomap_fragment>`)
       .replace('#include <color_fragment>', `#include <color_fragment>
         diffuseColor.rgb *= 0.93 + 0.1 * iceNoise(vIceW * 0.18) - 0.05 * iceNoise(vIceW * 1.3 + 3.0);`)
       .replace('#include <opaque_fragment>', `
@@ -144,7 +165,7 @@ export function makeSnow(mat: THREE.MeshStandardMaterial, strength: number) {
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'bk-snow';
+  mat.customProgramCacheKey = () => (baked ? 'bk-snow-baked' : 'bk-snow');
   return u;
 }
 
@@ -225,5 +246,74 @@ export function loadSky(renderer: THREE.WebGLRenderer) {
       } catch (e) { rej(e); }
     };
     img.src = `${BASE}sky.png`;
+  });
+}
+
+/**
+ * Rocks lying in the snow: snow settled on whatever faces up (in world space),
+ * thinning out in a noisy edge, darkened by the rock's baked occlusion.
+ */
+export function makeDusted(mat: THREE.MeshStandardMaterial) {
+  mat.onBeforeCompile = (shader) => {
+    addPositions(shader);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          vec3 wn = inverseTransformDirection(normal, viewMatrix);
+          float n = iceNoise(vIceW * 2.3) * 0.6 + iceNoise(vIceW * 7.0) * 0.4;
+          float cover = smoothstep(0.6, 0.85, wn.y + (n - 0.5) * 0.55);
+          vec3 snowC = vec3(0.93, 0.95, 0.97);
+          #ifdef USE_COLOR
+            snowC *= mix(1.0, vColor.r, 0.7);
+          #endif
+          diffuseColor.rgb = mix(diffuseColor.rgb, snowC, cover);
+          roughnessFactor = mix(roughnessFactor, 0.85, cover);
+        }`);
+  };
+  mat.customProgramCacheKey = () => 'bk-dusted';
+}
+
+/* ---------- models and baked light (scripts/build-models.mjs) ---------- */
+
+export interface World { bricks: THREE.BufferGeometry[]; rocks: THREE.BufferGeometry[] }
+
+/** Plain float attributes with the node's transform applied (the file is quantised). */
+function flat(mesh: THREE.Mesh) {
+  const src = mesh.geometry, g = new THREE.BufferGeometry();
+  for (const [name, a] of Object.entries(src.attributes)) {
+    const n = a.itemSize, out = new Float32Array(a.count * n);
+    for (let i = 0; i < a.count; i++) {
+      out[i * n] = a.getX(i);
+      if (n > 1) out[i * n + 1] = a.getY(i);
+      if (n > 2) out[i * n + 2] = a.getZ(i);
+      if (n > 3) out[i * n + 3] = a.getW(i);
+    }
+    g.setAttribute(name, new THREE.BufferAttribute(out, n));
+  }
+  if (src.index) g.setIndex(new THREE.BufferAttribute(new Uint32Array(src.index.array), 1));
+  g.applyMatrix4(mesh.matrixWorld);
+  return g;
+}
+
+/** The ice bricks and rocks, with their baked occlusion in the vertex colours. */
+export async function loadWorld(): Promise<World> {
+  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(MODELS + 'world.glb');
+  gltf.scene.updateMatrixWorld(true);
+  const get = (name: string) => {
+    const m = gltf.scene.getObjectByName(name);
+    if (!(m instanceof THREE.Mesh)) throw new Error(`world.glb: no ${name}`);
+    return flat(m);
+  };
+  return {
+    bricks: Array.from({ length: BRICKS }, (_, k) => get(`brick${k}`)),
+    rocks: Array.from({ length: ROCKS }, (_, k) => get(`rock${k}`)),
+  };
+}
+
+/** The hill's baked light: R = sky occlusion, G = sun shadow. */
+export function loadGroundLight() {
+  return new THREE.TextureLoader().loadAsync(MODELS + 'ground-light.png').then((t) => {
+    t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4;
+    return t;
   });
 }
