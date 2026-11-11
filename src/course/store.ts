@@ -41,6 +41,9 @@ export interface CourseSettings {
   theme: 'auto' | 'light' | 'dark';
 }
 
+/** The last result of one microeconomics question, and when it was given (ms). */
+export interface MicroMark { ok: 0 | 1; at: number }
+
 export interface CourseState {
   v: 1;
   lessons: Record<string, LessonProgress>;
@@ -53,6 +56,7 @@ export interface CourseState {
   days: Record<string, number>; // day -> answers given
   right?: Record<string, number>; // day -> answers given correctly
   reviews?: Record<string, number>; // day -> flashcards reviewed
+  micro?: Record<string, MicroMark>; // microeconomics question id -> its last result
   settings: CourseSettings;
 }
 
@@ -186,6 +190,18 @@ export function useCourse() {
     return {
       answered(correct: boolean) {
         update((s) => touch(correct ? { ...s, right: bump(s.right, today()) } : s, 1, correct ? 10 : 2));
+      },
+      /** A microeconomics answer: remembered per question, and counted like any other answer. */
+      markMicro(id: string, correct: boolean) {
+        update((s) => touch({ ...s, micro: { ...s.micro, [id]: { ok: correct ? 1 : 0, at: Date.now() } }, ...(correct ? { right: bump(s.right, today()) } : {}) }, 1, correct ? 10 : 2));
+      },
+      /** Results saved by an earlier build on this device only; anything already known wins. */
+      importMicro(old: Record<string, 0 | 1>) {
+        update((s) => {
+          const add = Object.entries(old).filter(([id, v]) => !s.micro?.[id] && (v === 0 || v === 1));
+          if (!add.length) return s;
+          return { ...s, micro: { ...Object.fromEntries(add.map(([id, v]) => [id, { ok: v, at: 0 }])), ...s.micro } };
+        });
       },
       visit(lesson: string, step: number) {
         update((s) => (s.last?.lesson === lesson && s.last.step === step ? s : { ...s, last: { lesson, step } }));
