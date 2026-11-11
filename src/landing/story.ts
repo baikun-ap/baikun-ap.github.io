@@ -21,6 +21,12 @@ import { ROCKS, STONES, groundHeight, squeeze } from './shapes';
  *   6. 开始 gathers out of ice dust on a round platform.
  * Story progress s runs 0 → 1: the first 0.2 plays by itself as an intro,
  * the rest follows the page scroll. Original three.js scene.
+ *
+ * Direction (ICE-PLAN stage 3): the camera flies on smooth keyframes with
+ * banking, framing changes (FOV) and a light handheld drift; the bricks of 学
+ * break off one at a time, each in a puff of snow dust; the eight segments fly
+ * in and lock into the ring one by one; the portal flashes as the camera
+ * passes through; snow keeps falling around the camera wherever it is.
  */
 
 export interface Story {
@@ -53,6 +59,20 @@ async function glyphCells(text: string, w: number, h: number, step: number): Pro
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ramp = (s: number, a: number, b: number) => clamp01((s - a) / (b - a));
 const ease = (x: number) => x * x * (3 - 2 * x);
+/** Overshoots a little and settles: a piece clicking into place. */
+const easeBack = (x: number) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+/** 0 → 1 → 0 over [a, b]. */
+const bump = (s: number, a: number, b: number) => Math.sin(Math.PI * ramp(s, a, b));
+
+/** Soft round sprites (snow dust, falling snow): white, fading at the edge. */
+const SOFT_FRAG = /* glsl */`
+  varying float vA; varying float vSoft;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float a = vA * (1.0 - smoothstep(mix(0.55, 0.0, vSoft), 1.0, d));
+    gl_FragColor = vec4(0.97, 0.985, 1.0, a);
+  }`;
 
 export function createStory(host: HTMLElement, onReady: () => void): Story | null {
   try {
@@ -109,12 +129,13 @@ function build(host: HTMLElement, onReady: () => void): Story {
   skipAiry(bokeh);
   composer.addPass(bokeh);
   const grade = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 } },
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFlash: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; varying vec2 vUv;
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uFlash; varying vec2 vUv;
       float h(vec2 p){ p = fract(p*vec2(123.34,345.45)); p += dot(p,p+34.345); return fract(p.x*p.y); }
       void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float d = length(vUv-0.5);
         c *= mix(1.0, 0.82, smoothstep(0.35, 0.85, d)); c += (h(vUv*(uTime+1.0)*80.0)-0.5)*0.03;
+        c = mix(c, vec3(1.0, 1.0, 1.02), uFlash * (0.85 - 0.35 * d));
         gl_FragColor = vec4(c, 1.0); }`,
   });
   composer.addPass(grade);
@@ -291,6 +312,39 @@ function build(host: HTMLElement, onReady: () => void): Story {
   let brickSets: { mesh: THREE.InstancedMesh; ids: number[] }[] = [];
   let jitter: THREE.Vector3[] = [], jscale: number[] = [];
   let targets: THREE.Vector3[] = [], scatter: THREE.Vector3[] = [], burst: THREE.Vector3[] = [], spin: THREE.Vector3[] = [], delay: number[] = [];
+  // Breaking off: when each brick lets go (story progress), which way it pops
+  // out first, and the real time it did (-1: still in place).
+  let detachAt: number[] = [], kick: THREE.Vector3[] = [], detachT: number[] = [];
+  /** Snow dust puffed out by each brick as it breaks off (DUST particles per brick). */
+  const DUST = mobile ? 4 : 7;
+  let dustBirth: THREE.BufferAttribute | null = null, dustDirty = false;
+  const markDust = (i: number, at: number) => {
+    if (!dustBirth) return;
+    (dustBirth.array as Float32Array).fill(at, i * DUST, (i + 1) * DUST);
+    dustDirty = true;
+  };
+  const dustMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uScale: { value: 400 } },
+    vertexShader: /* glsl */`
+      attribute vec3 aVel; attribute float aBirth; attribute float aSeed;
+      uniform float uTime; uniform float uScale;
+      varying float vA; varying float vSoft;
+      void main() {
+        float age = uTime - aBirth, life = 1.5 + aSeed * 1.6;
+        if (aBirth < 0.0 || age < 0.0 || age > life) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; vA = 0.0; vSoft = 0.0; return; }
+        // Thrown out, braked by the air, then drifting down and downwind.
+        vec3 p = position + aVel * (1.0 - exp(-2.4 * age)) / 2.4 + vec3(0.22 * age, -0.09 * age * age - 0.06 * age, 0.0);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float size = (0.14 + aSeed * 0.2) * (1.0 + age * 1.3);
+        gl_PointSize = min(size * uScale / max(0.2, -mv.z), 150.0);
+        float x = age / life;
+        vA = smoothstep(0.0, 0.07, age) * (1.0 - x) * (1.0 - x) * 0.9;
+        vSoft = 1.0;
+      }`,
+    fragmentShader: SOFT_FRAG,
+    transparent: true, depthWrite: false,
+  });
   let lines: THREE.LineSegments | null = null;
   const charGroup = new THREE.Group(); charGroup.position.set(0, 1.25, 0); scene.add(charGroup);
 
@@ -316,6 +370,30 @@ function build(host: HTMLElement, onReady: () => void): Story {
     delay = targets.map((t, i) => (t.y + 2) * 0.02 + rand(i + 19) * 0.25);
     jitter = targets.map((_, i) => new THREE.Vector3(rand(i + 30) - 0.5, rand(i + 31) - 0.5, rand(i + 32) - 0.5).multiplyScalar(0.09));
     jscale = targets.map((_, i) => 0.9 + rand(i + 33) * 0.12);
+    // The bricks let go one at a time, the crack running down from the top:
+    // the first few slowly, one by one, then faster and faster.
+    const order = targets.map((t, i) => ({ i, k: -t.y + t.x * 0.22 + rand(i + 34) * 1.4 })).sort((p, q) => p.k - q.k);
+    detachAt = new Array(targets.length).fill(0);
+    order.forEach(({ i }, r) => { detachAt[i] = 0.312 + 0.098 * Math.pow(r / Math.max(1, order.length - 1), 0.6); });
+    kick = targets.map((t, i) => new THREE.Vector3(t.x * 0.5 + (rand(i + 35) - 0.5) * 1.4, 1.2 + rand(i + 36) * 1.6, 2.6 + rand(i + 37) * 2.4));
+    detachT = targets.map(() => -1);
+    // Their dust: a few soft puffs around each brick, all waiting unborn.
+    const n = targets.length * DUST, org = new Float32Array(n * 3), vel = new Float32Array(n * 3), seed = new Float32Array(n);
+    targets.forEach((t, i) => { for (let k = 0; k < DUST; k++) {
+      const j = i * DUST + k, r = (q: number) => rand(j * 7.1 + q);
+      org.set([t.x + (r(1) - 0.5) * 0.3, t.y + (r(2) - 0.5) * 0.3, t.z + (r(3) - 0.5) * 0.3], j * 3);
+      vel.set([(r(4) - 0.5) * 1.8 + t.x * 0.12, 0.2 + r(5) * 1.3, 0.3 + r(6) * 1.5], j * 3);
+      seed[j] = r(7);
+    } });
+    const dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.BufferAttribute(org, 3));
+    dg.setAttribute('aVel', new THREE.BufferAttribute(vel, 3));
+    dg.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+    dustBirth = new THREE.BufferAttribute(new Float32Array(n).fill(-1), 1);
+    dg.setAttribute('aBirth', dustBirth);
+    const puff = new THREE.Points(dg, dustMat);
+    puff.frustumCulled = false;
+    charGroup.add(puff); airy.push(puff);
     const geos = world ? world.bricks : [white(new RoundedBoxGeometry(CELL * 0.95, CELL * 0.95, CELL * 1.6, 3, CELL * 0.14))];
     brickSets = geos.map((g, k) => {
       const ids = targets.map((_, i) => i).filter((i) => Math.floor(rand(i + 77) * geos.length) === k);
@@ -358,22 +436,34 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const ring = new THREE.Group(); ring.position.set(0, 2.4, -80); scene.add(ring);
   const iceMat = new THREE.MeshPhysicalMaterial({ color: 0xeef3f7, roughness: 0.18, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.4, sheenColor: new THREE.Color(0xcfe9ff), roughnessMap: surf.ice.rough, normalMap: surf.ice.normal, normalScale: new THREE.Vector2(0.5, 0.5), emissive: 0x9fb6cc, emissiveIntensity: 0.08 });
   makeIce(iceMat, { deep: 0x93b5d2, glow: 0xeaf6ff, depth: 0.6, scale: 1.6 });
-  const segs: THREE.Mesh[] = [];
+  // Each segment (and the inner ring) has its own copy of the ice, so it can
+  // flash on its own as it locks into place.
+  const lockMat = () => { const m = iceMat.clone(); makeIce(m, { deep: 0x93b5d2, glow: 0xeaf6ff, depth: 0.6, scale: 1.6 }); return m; };
+  const segs: THREE.Mesh<THREE.TorusGeometry, THREE.MeshPhysicalMaterial>[] = [];
+  const segFrom: THREE.Vector3[] = [], segTurn: THREE.Vector2[] = [], segLock: number[] = [];
   for (let i = 0; i < 8; i++) {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.42, 16, 28, (Math.PI * 2) / 8 * 0.78), iceMat);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.42, 16, 28, (Math.PI * 2) / 8 * 0.78), lockMat());
     m.rotation.z = (i / 8) * Math.PI * 2;
+    // Where it waits before flying in: spread wide around the ring, turned askew.
+    const a = (i / 8) * Math.PI * 2 + 0.3;
+    segFrom.push(new THREE.Vector3(Math.cos(a) * 7.5, Math.sin(a) * 6, (i % 2 ? 1 : -1) * (4 + rand(i + 50) * 3)));
+    segTurn.push(new THREE.Vector2((rand(i + 51) - 0.5) * 3, (rand(i + 52) - 0.5) * 3));
+    segLock.push(-1);
     ring.add(m); segs.push(m);
   }
-  const inner = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.16, 12, 96), iceMat); ring.add(inner);
+  const inner = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.16, 12, 96), lockMat()); ring.add(inner);
+  let innerLock = -1;
 
   /* ---------- scene 5: the portal ---------- */
   const portal = new THREE.Group(); portal.position.set(0, 2.4, -110); scene.add(portal);
+  const portalBlocks: THREE.Mesh[] = [];
   for (let i = 0; i < 30; i++) {
     const a = (i / 30) * Math.PI * 2;
     const b = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.7 + rand(i + 60) * 0.5, 0.9, 2, 0.12), iceMat);
     b.position.set(Math.cos(a) * 3.1, Math.sin(a) * 3.1, (rand(i + 61) - 0.5) * 0.4);
     b.rotation.set(rand(i + 62) * 0.6, rand(i + 63) * 0.6, a);
-    portal.add(b);
+    b.userData.home = b.position.clone();
+    portal.add(b); portalBlocks.push(b);
   }
   const coreN = mobile ? 500 : 900, cp = new Float32Array(coreN * 3);
   for (let i = 0; i < coreN; i++) { const a = rand(i + 70) * 6.283, r = Math.pow(rand(i + 71), 0.6) * 2.6; cp[i * 3] = Math.cos(a) * r; cp[i * 3 + 1] = Math.sin(a) * r; cp[i * 3 + 2] = (rand(i + 72) - 0.5) * 0.8; }
@@ -393,9 +483,12 @@ function build(host: HTMLElement, onReady: () => void): Story {
   makeSnow(floorMat, mobile ? 1.6 : 2.2);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), floorMat);
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.08; fin.add(floor);
+  // The floor and its rings show only from the portal on: seen from the ring
+  // they were a grey disc hanging in the fog.
+  const finGround: THREE.Object3D[] = [floor];
   [5, 6.4, 8.2].forEach((r) => {
     const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.04, 96), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
-    m.rotation.x = -Math.PI / 2; m.position.y = -0.06; fin.add(m);
+    m.rotation.x = -Math.PI / 2; m.position.y = -0.06; fin.add(m); finGround.push(m);
   });
   let dust: THREE.Points | null = null, dustHome: Float32Array | null = null, dustFrom: Float32Array | null = null;
   glyphCells('开始', 220, 110, 2).then((cells) => {
@@ -425,31 +518,86 @@ function build(host: HTMLElement, onReady: () => void): Story {
   };
   if (!rich) { /* procedural maps only */ } else if (document.readyState === 'complete') scans(); else addEventListener('load', scans, { once: true });
 
-  /* ---------- snow everywhere ---------- */
-  const snowN = mobile ? 900 : 1800, sp = new Float32Array(snowN * 3);
-  for (let i = 0; i < snowN; i++) { sp[i * 3] = (rand(i + 90) - 0.5) * 40; sp[i * 3 + 1] = rand(i + 91) * 14 - 1; sp[i * 3 + 2] = 18 - rand(i + 92) * 170; }
-  const snowGeo = new THREE.BufferGeometry(); snowGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  const flakes = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: mobile ? 0.06 : 0.05, transparent: true, opacity: 0.9, depthWrite: false }));
+  /* ---------- snow falling around the camera ---------- */
+  // A box of flakes that travels with the camera (centred a little ahead of
+  // it): each flake falls and drifts in the wind, and wraps round the box, so
+  // it snows wherever the flight goes. Near flakes are big and soft, like out
+  // of focus; far ones fade into the fog.
+  const snowN = mobile ? 1300 : 2600, sp = new Float32Array(snowN * 4);
+  for (let i = 0; i < snowN; i++) sp.set([rand(i + 90), rand(i + 91), rand(i + 92), rand(i + 93)], i * 4);
+  const snowGeo = new THREE.BufferGeometry();
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(snowN * 3), 3));
+  snowGeo.setAttribute('aSeed', new THREE.BufferAttribute(sp, 4));
+  const snowMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uScale: { value: 400 }, uCenter: { value: new THREE.Vector3() }, uBox: { value: new THREE.Vector3(26, 15, 34) }, uFall: { value: reduced ? 0 : 1 }, uMax: { value: 34 * renderer.getPixelRatio() } },
+    vertexShader: /* glsl */`
+      attribute vec4 aSeed;
+      uniform float uTime; uniform float uScale; uniform vec3 uCenter; uniform vec3 uBox; uniform float uFall; uniform float uMax;
+      varying float vA; varying float vSoft;
+      void main() {
+        float w = aSeed.w;
+        vec3 p = aSeed.xyz * uBox;
+        p.y -= uTime * (0.5 + w * 0.8) * uFall;
+        p.x += uTime * 0.3 * uFall + sin(uTime * 0.7 + w * 31.0) * 0.4 * uFall;
+        p.z += sin(uTime * 0.5 + aSeed.x * 23.0) * 0.3 * uFall;
+        vec3 lo = uCenter - uBox * 0.5;
+        p = lo + mod(p - lo, uBox);
+        vec4 mv = viewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float depth = -mv.z;
+        float px = (0.018 + w * w * w * 0.05) * uScale / max(0.05, depth);
+        gl_PointSize = clamp(px, 1.0, uMax);
+        vSoft = clamp((px - 5.0) / 20.0, 0.0, 1.0);
+        vA = smoothstep(0.3, 1.3, depth) * (1.0 - smoothstep(uBox.z * 0.38, uBox.z * 0.5, depth)) * mix(0.95, 0.55, vSoft);
+      }`,
+    fragmentShader: SOFT_FRAG,
+    transparent: true, depthWrite: false,
+  });
+  const flakes = new THREE.Points(snowGeo, snowMat);
+  flakes.frustumCulled = false;
   scene.add(flakes); airy.push(flakes);
 
   /* ---------- the camera path ---------- */
-  const keys: [number, THREE.Vector3, THREE.Vector3][] = [
-    [0.0, new THREE.Vector3(0, 4.6, mobile ? 21 : 16), new THREE.Vector3(0, 4.2, 0)],
-    [0.2, new THREE.Vector3(3.4, 3.4, mobile ? 17 : 13), new THREE.Vector3(0, mobile ? 2.7 : 3.2, 0)],
-    [0.3, new THREE.Vector3(0, 3.2, mobile ? 12 : 9.5), new THREE.Vector3(0, 3.2, 0)],
-    [0.46, new THREE.Vector3(0.5, 2.6, -40), new THREE.Vector3(0, 2.2, -70)],
-    [0.6, new THREE.Vector3(0, 2.4, mobile ? -68 : -71), new THREE.Vector3(0, 2.4, -80)],
-    [0.76, new THREE.Vector3(0, 2.4, mobile ? -98 : -101), new THREE.Vector3(0, 2.4, -110)],
-    [0.92, new THREE.Vector3(0, 5.2, mobile ? -125 : -128), new THREE.Vector3(0, 1.8, -140)],
-    [1.0, new THREE.Vector3(0, 3.6, mobile ? -128 : -131), new THREE.Vector3(0, 2.3, -140)],
+  // Keyframes: [story, position, look-at, roll (banking), extra FOV, hold].
+  // Position and aim follow Catmull-Rom curves through the keys; the speed
+  // along them is a smooth monotone spline, so the camera never stops dead at
+  // a key, except where `hold` (< 1) makes it linger: on the finished 学 and on
+  // the assembled ring.
+  const M = mobile, V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+  const keys: [number, THREE.Vector3, THREE.Vector3, number, number, number][] = [
+    [0.0, V(-2.4, 6.4, M ? 22.5 : 17.5), V(0, 4.5, 0), 0, 0, 1], // crane down onto the drawing
+    [0.2, V(3.4, 3.4, M ? 17 : 13), V(0, M ? 2.7 : 3.2, 0), -0.035, 0, 0.7], // arc round the ice 学
+    [0.3, V(M ? 0 : 0.3, 3.3, M ? 14.5 : 10), V(0, 3.5, 0), 0, 0, 0.35], // linger on it
+    [0.35, V(-1.6, 4.6, M ? 14.5 : 11.5), V(0, 4.2, -2), 0.04, 2, 1], // back off as it starts to crumble
+    [0.4, V(3.6, 4.2, 1), V(0, 3, -22), 0.14, 8, 1], // swoop past it, banking
+    [0.44, V(-0.6, 3.5, -20), V(0.6, 2.5, -50), -0.12, 8, 1], // weave through the rocks
+    [0.5, V(0.5, 2.6, -46), V(0, 2.4, -80), 0.06, 4, 1],
+    [0.56, V(M ? 1.8 : 3.6, 3.4, M ? -61 : -66), V(0, 2.4, -80), 0.03, 0, 0.6], // the ring assembles, seen askew
+    [0.63, V(0, 2.4, M ? -68 : -71), V(0, 2.4, -80), 0, 0, 0.4], // and face on
+    [0.72, V(0, 2.4, M ? -90 : -92), V(0, 2.4, -110), 0, 0, 1], // through it to the portal
+    [0.79, V(0, 2.4, -105), V(0, 2.4, -112), 0, 14, 1], // dolly-zoom into the portal
+    [0.86, V(0, 3.4, -121), V(0, 1.8, -140), 0, 2, 1],
+    [0.93, V(-2.6, 5.2, M ? -127 : -129), V(0, 1.8, -140), -0.03, 0, 1], // crane over the platform
+    [1.0, V(0, 3.6, M ? -128 : -131), V(0, 2.3, -140), 0, 0, 1],
   ];
   const posCurve = new THREE.CatmullRomCurve3(keys.map((k) => k[1]), false, 'centripetal');
   const lookCurve = new THREE.CatmullRomCurve3(keys.map((k) => k[2]), false, 'centripetal');
+  const feelCurve = new THREE.CatmullRomCurve3(keys.map((k) => V(k[3], k[4], 0)), false, 'catmullrom', 0.5);
+  // Monotone cubic (Fritsch–Butland) from story progress to key index.
+  const ks = keys.map((k) => k[0]), last = keys.length - 1;
+  const slope = ks.map((_, i) => {
+    if (i === 0 || i === last) return 0;
+    const h0 = ks[i] - ks[i - 1], h1 = ks[i + 1] - ks[i], d0 = 1 / h0, d1 = 1 / h1;
+    const w1 = 2 * h1 + h0, w2 = h1 + 2 * h0;
+    return ((w1 + w2) / (w1 / d0 + w2 / d1)) * keys[i][5];
+  });
   const along = (s: number) => {
-    let i = 0; while (i < keys.length - 2 && s > keys[i + 1][0]) i++;
-    const t = ease(clamp01((s - keys[i][0]) / (keys[i + 1][0] - keys[i][0])));
-    return (i + t) / (keys.length - 1);
+    let i = 0; while (i < last - 1 && s > ks[i + 1]) i++;
+    const h = ks[i + 1] - ks[i], x = clamp01((s - ks[i]) / h), x2 = x * x, x3 = x2 * x;
+    const y = (2 * x3 - 3 * x2 + 1) * i + (x3 - 2 * x2 + x) * h * slope[i] + (-2 * x3 + 3 * x2) * (i + 1) + (x3 - x2) * h * slope[i + 1];
+    return Math.min(1, Math.max(0, y / last));
   };
+  const baseFov = camera.fov, feel = new THREE.Vector3(), fwd = new THREE.Vector3(), buf = new THREE.Vector2();
 
   /* ---------- wind ---------- */
   let audio: { ctx: AudioContext; master: GainNode; lp: BiquadFilterNode } | null = null, soundOn = false;
@@ -480,6 +628,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
 
   /* ---------- loop ---------- */
   let scrollP = 0, story = 0, intro = reduced ? 1 : 0, mx = 0, my = 0, tx = 0, ty = 0, ready = false;
+  // The portal flash: the time the camera last passed through it going forward.
+  let flashT = -1, flash = 0, prevZ = Infinity;
   addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { tx = (e.clientX / innerWidth) * 2 - 1; ty = (e.clientY / innerHeight) * 2 - 1; } }, { passive: true });
   addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); composer.setPixelRatio(renderer.getPixelRatio()); });
 
@@ -502,15 +652,40 @@ function build(host: HTMLElement, onReady: () => void): Story {
     story += (goal - story) * Math.min(1, real * 3.2);
     const s = story;
     push += (pushGoal - push) * Math.min(1, dt * 3);
+    flash = flashT >= 0 && !reduced ? Math.exp(-(t - flashT) * 2.6) : 0;
     mx += (tx - mx) * dt * 2; my += (ty - my) * dt * 2;
 
-    // Camera.
+    // Camera: the path, the mouse parallax, a slow handheld drift and a shake
+    // when the bricks break and when the portal flashes.
     const u = along(s);
     posCurve.getPoint(u, camera.position);
     lookCurve.getPoint(u, look);
+    feelCurve.getPoint(u, feel);
+    const pathZ = camera.position.z;
     camera.position.x += mx * 0.6; camera.position.y -= my * 0.35;
+    let roll = feel.x;
+    if (!reduced) {
+      camera.position.x += Math.sin(t * 0.43) * 0.05 + Math.sin(t * 0.91 + 1.3) * 0.025;
+      camera.position.y += Math.sin(t * 0.57 + 0.7) * 0.04;
+      roll += Math.sin(t * 0.37 + 2.1) * 0.006;
+      const shake = 0.035 * bump(s, 0.31, 0.41) + 0.14 * flash;
+      if (shake > 0.001) {
+        camera.position.x += (Math.sin(t * 37.1) + Math.sin(t * 23.7 + 1)) * 0.5 * shake;
+        camera.position.y += (Math.sin(t * 31.3 + 2) + Math.sin(t * 19.9)) * 0.5 * shake;
+        roll += Math.sin(t * 27.3) * shake * 0.12;
+      }
+    }
     camera.lookAt(look);
+    camera.rotateZ(roll);
+    camera.fov = baseFov + feel.y;
+    camera.updateProjectionMatrix();
     (bokeh.uniforms as Record<string, THREE.IUniform>).focus.value = camera.position.distanceTo(look);
+    // Pixels per metre at one metre away, for the soft sprites.
+    const pxScale = renderer.getDrawingBufferSize(buf).y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+    dustMat.uniforms.uScale.value = snowMat.uniforms.uScale.value = pxScale;
+    dustMat.uniforms.uTime.value = snowMat.uniforms.uTime.value = t;
+    camera.getWorldDirection(fwd);
+    snowMat.uniforms.uCenter.value.copy(camera.position).addScaledVector(fwd, 11);
     // Mountains only where there is ground under them: the hill and the final platform.
     ranges.forEach((r) => { r.position.set(camera.position.x, 0, camera.position.z); r.visible = s < 0.46 || s > 0.84; });
     beams.forEach((b) => { (b.material as THREE.SpriteMaterial).opacity = 0.11 + 0.06 * Math.sin(t * 0.35 + b.userData.phase); });
@@ -525,13 +700,27 @@ function build(host: HTMLElement, onReady: () => void): Story {
       lines.visible = s < 0.2;
     }
     if (brickSets.length) {
-      const settle = s, out = ease(ramp(s, 0.31, 0.47));
       for (const { mesh, ids } of brickSets) for (let j = 0; j < ids.length; j++) {
         const i = ids[j];
-        const a = ease(ramp(settle, 0.06 + delay[i] * 0.25, 0.15 + delay[i] * 0.25));
+        const a = ease(ramp(s, 0.06 + delay[i] * 0.25, 0.15 + delay[i] * 0.25));
         v3.copy(scatter[i]).lerp(targets[i], a);
-        if (out > 0) v3.lerp(burst[i], out);
-        const hover = push * (1 - out);
+        // Breaking off: a short tremble, then the brick lets go in a puff of
+        // snow dust, pops out towards the camera and arcs away down the flight.
+        // It keeps drifting a little on its own even if the scroll stops.
+        const d = detachAt[i];
+        if (s >= d && detachT[i] < 0) { detachT[i] = t; markDust(i, t); }
+        else if (s < d && detachT[i] >= 0) { detachT[i] = -1; markDust(i, -1); }
+        let f = ramp(s, d, d + 0.075);
+        if (detachT[i] >= 0 && !reduced) f = Math.max(f, 0.3 * (1 - Math.exp(-(t - detachT[i]) * 1.8)));
+        if (f > 0) {
+          const g = 1 - (1 - f) * (1 - f), w0 = (1 - g) * (1 - g), w1 = 2 * (1 - g) * g, w2 = g * g, tg = targets[i], kk = kick[i], bu = burst[i];
+          v3.set(w0 * v3.x + w1 * (tg.x + kk.x) + w2 * bu.x, w0 * v3.y + w1 * (tg.y + kk.y) + w2 * bu.y, w0 * v3.z + w1 * (tg.z + kk.z) + w2 * bu.z);
+        } else if (!reduced) {
+          const shiver = ramp(s, d - 0.014, d);
+          if (shiver > 0) { v3.x += Math.sin(t * 61 + i) * 0.02 * shiver; v3.y += Math.sin(t * 47 + i * 1.7) * 0.014 * shiver; }
+        }
+        const out = f * 1.6;
+        const hover = push * (1 - Math.min(1, f * 3));
         v3.x += (targets[i].x) * 0.25 * hover; v3.y += (targets[i].y - 3) * 0.25 * hover; v3.z += Math.sin(i) * 0.6 * hover;
         e3.set(spin[i].x * (1 - a + out) + jitter[i].x, spin[i].y * (1 - a + out) + jitter[i].y, spin[i].z * (1 - a + out) + jitter[i].z);
         q.setFromEuler(e3);
@@ -541,22 +730,44 @@ function build(host: HTMLElement, onReady: () => void): Story {
       }
       blockMat.emissiveIntensity = ramp(s, 0.13, 0.2) * (0.9 + 0.35 * Math.sin(t * 1.6)) + push * 0.8;
       for (const { mesh } of brickSets) { mesh.instanceMatrix.needsUpdate = true; mesh.visible = s < 0.5; }
+      if (dustBirth && dustDirty) { dustBirth.needsUpdate = true; dustDirty = false; }
     }
     hill.visible = s < 0.5;
+    finGround.forEach((o) => { o.visible = s > 0.78; });
 
     for (const r of rocks) { r.rotation.y += r.userData.spin * dt; r.rotation.x += r.userData.spin * dt * 0.5; }
-    // Scene 4: the ring turns, its segments open with the scroll.
-    const open = ramp(s, 0.5, 0.62);
+    // Scene 4: the eight segments (the eight steps of a lesson) fly in one by
+    // one and click into the turning ring, each flashing as it locks; then the
+    // inner ring springs up.
     ring.rotation.z = (reduced ? 0 : t * 0.15) + s * 4;
     ring.rotation.x = Math.sin(t * 0.3) * 0.15 + 0.2;
-    segs.forEach((m, i) => { const a = (i / 8) * Math.PI * 2 + 0.3; m.position.set(Math.cos(a) * (1 - open) * 1.2, Math.sin(a) * (1 - open) * 1.2, (1 - open) * (i % 2 ? 1.5 : -1.5)); });
+    segs.forEach((m, i) => {
+      const r = ramp(s, 0.49 + i * 0.0145, 0.518 + i * 0.0145), e = easeBack(r), k = 1 - e;
+      m.position.copy(segFrom[i]).multiplyScalar(k);
+      m.rotation.x = segTurn[i].x * k; m.rotation.y = segTurn[i].y * k;
+      if (r >= 1 && segLock[i] < 0) segLock[i] = t; else if (r < 1) segLock[i] = -1;
+      m.material.emissiveIntensity = 0.08 + (segLock[i] >= 0 && !reduced ? 1.5 * Math.exp(-(t - segLock[i]) * 3) : 0);
+    });
+    const ir = ramp(s, 0.6, 0.635);
+    inner.scale.setScalar(Math.max(0.0001, easeBack(ir)));
+    if (ir >= 1 && innerLock < 0) innerLock = t; else if (ir < 1) innerLock = -1;
+    inner.material.emissiveIntensity = 0.08 + (innerLock >= 0 && !reduced ? 1.2 * Math.exp(-(t - innerLock) * 2.5) : 0);
     inner.rotation.y = t * 0.6;
-    // Scene 5: the portal breathes.
-    portal.rotation.z = reduced ? 0 : t * 0.08;
-    core.rotation.z = -t * 0.4;
-    portalLight.intensity = 4 + Math.sin(t * 2) * 1.5;
-    // Fade the core as the camera flies through it, so it never floods the screen.
+    // Scene 5: the portal breathes; its core spins faster as the camera
+    // comes near, and flashes white when the camera passes through.
+    if (prevZ > portal.position.z && pathZ <= portal.position.z && Number.isFinite(prevZ)) flashT = t;
+    prevZ = pathZ;
     const pd = Math.abs(camera.position.z - portal.position.z);
+    const near = pathZ > portal.position.z ? clamp01(1 - (pd - 1) / 12) : 0;
+    portal.rotation.z = reduced ? 0 : t * 0.08;
+    core.rotation.z -= dt * (0.4 + near * 3.5);
+    core.scale.setScalar(1 + flash * 1.8 - near * 0.25);
+    portalBlocks.forEach((b) => b.position.copy(b.userData.home).multiplyScalar(1 + flash * 0.3));
+    portalLight.intensity = 4 + Math.sin(t * 2) * 1.5 + near * 3 + flash * 30;
+    iceMat.emissiveIntensity = 0.08 + flash * 1.2;
+    bloom.strength = 0.32 + flash * 1.1;
+    grade.uniforms.uFlash.value = flash;
+    // Fade the core as the camera flies through it, so it never floods the screen.
     coreMat.opacity = 0.9 * clamp01((pd - 2) / 6);
     // Scene 6: dust gathers into 开始.
     if (dust && dustHome && dustFrom) {
