@@ -1,0 +1,6 @@
+Textures and sky for the landing page (bai.kun), from Poly Haven — CC0 (public domain),
+https://polyhaven.com/license . Converted by scripts/build-textures.py.
+
+  snow_*.webp  "Snow 02"     https://polyhaven.com/a/snow_02   (dark specks lifted, levelled)
+  rock_*.webp  "Rock 06"     https://polyhaven.com/a/rock_06   (turned grey, levelled)
+  sky.png      "Snow Field"  https://polyhaven.com/a/snow_field (1k HDRI halved to 512x256, RGBE in PNG)

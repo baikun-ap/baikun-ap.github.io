@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 import './course/x.css';
+import './course/ice.css';
 import './vendor.css';
 import { installMotion } from './lib/anim';
 

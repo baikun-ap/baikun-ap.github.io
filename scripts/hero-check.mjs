@@ -1,4 +1,4 @@
-// Landing-page check in real Chromium: the flower-valley landing at phone,
+// Landing-page check in real Chromium: the ice-world landing at phone,
 // tablet and desktop size. No page errors, no sideways scroll, the valley
 // canvas mounts, and after scrolling through every block the content that is
 // on screen is fully visible (scroll-scrubbed motion never leaves it faded).
@@ -33,11 +33,16 @@ for (const [w, h, locale] of [[390, 844, 'ru-RU'], [820, 1180, 'en-US'], [1440, 
   await page.goto('http://localhost:4174/');
   await page.waitForTimeout(3000);
   const tag = `${w}x${h}`;
+  await page.locator('#loader.gone').waitFor({ state: 'attached', timeout: 8000 }).catch(() => {});
   ok(await page.locator('#loader.gone').count() === 1, `${tag} loader goes away`);
+  ok((await page.locator('#load-num').innerText()) === '100', `${tag} loading counter reaches 100`);
+  ok(/^(low|mid|high)/.test(await page.evaluate(() => document.documentElement.dataset.quality ?? '')), `${tag} quality level chosen`);
+  ok(await page.evaluate(() => document.fonts.check('10px "Baikun Pixel"', 'BAI.KUN КИТАЙСКИЙ')), `${tag} pixel font loaded`);
   ok(await page.locator('.js-canvas-container canvas').count() === 1, `${tag} valley canvas mounted`);
+  await page.locator('#hero-title').waitFor({ state: 'visible', timeout: 12000 }).catch(() => {});
   ok(await page.locator('#hero-title').isVisible(), `${tag} hero title visible`);
   const title = (await page.locator('#hero-title').innerText()).replace(/\s+/g, ' ').trim();
-  ok(locale.startsWith('en') ? /Grown/.test(title) : /Выращивай/.test(title), `${tag} hero title in ${locale.slice(0, 2)}: “${title}”`);
+  ok(locale.startsWith('en') ? /melts/i.test(title) : /не тает/i.test(title), `${tag} hero title in ${locale.slice(0, 2)}: “${title}”`);
   await page.screenshot({ path: `${OUT}/${tag}-top.png` });
 
   const H = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
@@ -70,8 +75,8 @@ for (const [w, h, locale] of [[390, 844, 'ru-RU'], [820, 1180, 'en-US'], [1440, 
   await page.goto('http://localhost:4174/');
   await page.waitForTimeout(1500);
   await Promise.all([page.waitForNavigation(), page.click('#lang')]);
-  await page.waitForTimeout(1500);
-  ok(/Grown/.test(await page.locator('#hero-title').innerText()), 'EN switch turns the page English');
+  await page.locator('#hero-title').waitFor({ state: 'visible', timeout: 12000 }).catch(() => {});
+  ok(/melts/i.test(await page.locator('#hero-title').innerText()), 'EN switch turns the page English');
   ok(await page.evaluate(() => localStorage.getItem('baikun-lang')) === 'en', 'EN choice is shared with the course');
   await ctx.close();
 }

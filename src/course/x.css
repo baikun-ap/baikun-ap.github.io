@@ -748,3 +748,7 @@ a.mt-pdf:hover { border-color: var(--cyan); }
 /* answer feedback and Next stay clear of the phone tab bar; a new question shows below the header */
 .micro .quiz-foot { scroll-margin-bottom: calc(var(--tab-h, 64px) + 24px); }
 .micro .quiz { scroll-margin-top: 72px; }
+.micro-ch { margin: 2px 0 4px; color: var(--cyan); font-weight: 500; }
+.micro-filter { margin: 12px 0 14px; gap: 8px; flex-wrap: wrap; }
+.micro-keys { margin-top: 18px; }
+@media (hover: none), (max-width: 899px) { .micro-keys { display: none; } }
