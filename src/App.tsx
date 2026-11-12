@@ -103,7 +103,7 @@ export default function App() {
   return (
     <div className="x">
       <div className="stars" aria-hidden="true" />
-      <IceBackground />
+      <IceBackground route={head} />
       <header className="x-top">
         <a className="x-logo" href="../" aria-label={t('bai.kun — на главную', 'bai.kun — home page')}>bai<i>.kun</i></a>
         <nav className="x-nav" aria-label={t('Разделы', 'Sections')}>

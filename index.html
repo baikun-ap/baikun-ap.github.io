@@ -33,7 +33,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Antonio:wght@500;700&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap&text=%E5%AD%A6%E5%BC%80%E5%A7%8B">
 </head>
 <body>
@@ -84,7 +84,13 @@
 </footer>
 
 <div class="track" aria-hidden="true"></div>
-<div class="loader" id="loader"><span class="tag">LOADING · 载入</span></div>
+<div class="loader" id="loader" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Загрузка" data-en-aria="Loading">
+  <div class="load-box">
+    <span class="load-num"><b id="load-num">000</b>%</span>
+    <span class="load-bar" aria-hidden="true"><i id="load-bar"></i></span>
+    <span class="load-tag"><span data-en="FREEZING THE WORLD">ЗАМОРАЖИВАЮ МИР</span><span>载入</span></span>
+  </div>
+</div>
 
 <script type="module" src="/src/landing/main.ts"></script>
 </body>

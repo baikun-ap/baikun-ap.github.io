@@ -41,17 +41,42 @@ function decode(el: Element, delay = 0) {
 }
 
 /* ---------- the 3D story ---------- */
-const loader = $('#loader');
-let entered = false;
-const enter = () => {
-  if (entered) return;
-  entered = true;
+// The loading screen counts real work: the models, the baked light, the 学
+// glyph and the first frames, a quarter each. The number runs up to what is
+// done (on a timer, not on frames: the first frames are the slow ones) and
+// the world opens once it has reached 100.
+const loader = $('#loader'), loadNum = $('#load-num'), loadBar = $('#load-bar');
+let entered = false, loadGoal = 0.04, loadShown = 0, loadTimer = 0;
+const paintLoad = () => {
+  const n = Math.round(loadShown * 100);
+  if (loadNum) loadNum.textContent = String(n).padStart(3, '0');
+  if (loadBar) loadBar.style.width = `${n}%`;
+  loader?.setAttribute('aria-valuenow', String(n));
+};
+const open = () => {
+  clearInterval(loadTimer);
+  loadShown = 1; paintLoad();
   loader?.classList.add('gone');
   root.classList.add('shown');
   $$('.top .tag, .bottom .tag:not(#scene)').forEach((el, i) => decode(el, 200 + i * 120));
 };
+const enter = () => {
+  if (entered) return;
+  entered = true;
+  loadGoal = 1;
+  if (motion) setTimeout(open, 420); else open();
+};
+if (motion) loadTimer = window.setInterval(() => {
+  // A slow creep keeps the counter alive while a big file is on its way.
+  if (!entered) loadGoal = Math.min(0.92, loadGoal + 0.002);
+  loadShown += (loadGoal - loadShown) * (entered ? 0.4 : 0.14);
+  paintLoad();
+}, 40);
 const host = $('.js-canvas-container');
-const story: Story | null = host ? createStory(host, enter) : null;
+const story: Story | null = host ? createStory(host, enter, (p) => {
+  loadGoal = Math.max(loadGoal, Math.min(1, p));
+  if (!motion) { loadShown = loadGoal; paintLoad(); }
+}) : null;
 if (!story) enter();
 setTimeout(enter, 3000);
 

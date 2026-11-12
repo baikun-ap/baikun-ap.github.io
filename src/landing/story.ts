@@ -81,19 +81,52 @@ const SOFT_FRAG = /* glsl */`
     gl_FragColor = vec4(0.97, 0.985, 1.0, a);
   }`;
 
-export function createStory(host: HTMLElement, onReady: () => void): Story | null {
+/** Three levels of cost: an old phone, a new phone, a computer. */
+export type Quality = 'low' | 'mid' | 'high';
+
+/**
+ * The starting level. A software renderer and phones that say they are short
+ * of memory start low, other phones in the middle, computers high. `?q=low`,
+ * `?q=mid` or `?q=high` in the address forces a level. Whatever the guess, the
+ * frame-time governor in the loop steps the cost down on a device that cannot
+ * keep up.
+ */
+function pickQuality(mobile: boolean, soft: boolean): Quality {
+  const asked = new URLSearchParams(location.search).get('q');
+  if (asked === 'low' || asked === 'mid' || asked === 'high') return asked;
+  if (soft) return 'low';
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const mem = nav.deviceMemory ?? 8, cores = nav.hardwareConcurrency || 8;
+  const phone = mobile || (matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 700);
+  if (phone) return mem <= 3 || cores <= 2 ? 'low' : 'mid';
+  return mem <= 2 || cores <= 2 ? 'mid' : 'high';
+}
+
+export function createStory(host: HTMLElement, onReady: () => void, onProgress?: (p: number) => void): Story | null {
   try {
     const probe = document.createElement('canvas');
     if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) return null;
   } catch { return null; }
-  try { return build(host, onReady); } catch (e) { console.error('[story]', e); return null; }
+  try { return build(host, onReady, onProgress); } catch (e) { console.error('[story]', e); return null; }
 }
 
-function build(host: HTMLElement, onReady: () => void): Story {
+function build(host: HTMLElement, onReady: () => void, onProgress?: (p: number) => void): Story {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = innerWidth <= 820;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  // Without a graphics card (a software renderer: seconds per frame) the scans
+  // and the sky only stall the page, so it keeps the light procedural look.
+  // ?hq forces them anyway (for recordings).
+  const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '');
+  const soft = /swiftshader|llvmpipe|softpipe|software/i.test(gpu);
+  const rich = !soft || new URLSearchParams(location.search).has('hq');
+  // Cost follows the quality level, layout follows the screen (`mobile`).
+  const quality = pickQuality(mobile, soft && !rich);
+  const low = quality === 'low', lite = quality !== 'high';
+  document.documentElement.dataset.quality = quality;
+  let pixelRatio = Math.min(devicePixelRatio, low ? 1.5 : 2);
+  renderer.setPixelRatio(pixelRatio);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -122,11 +155,12 @@ function build(host: HTMLElement, onReady: () => void): Story {
       try { draw(...a); } finally { airy.forEach((o, i) => { o.visible = shown[i]; }); }
     };
   };
-  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 }));
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: low ? 0 : 4 }));
   composer.addPass(new RenderPass(scene, camera));
   // Contact shadows in the crevices between bricks and rocks (too heavy for phones).
-  if (!mobile) {
-    const ao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+  let ao: GTAOPass | null = null;
+  if (!lite) {
+    ao = new GTAOPass(scene, camera, innerWidth, innerHeight);
     ao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1.1 });
     ao.blendIntensity = 0.85;
     skipAiry(ao);
@@ -135,8 +169,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.4, 0.97);
   composer.addPass(bloom);
   // Depth of field: the subject sharp, the far fog and near snow soft.
-  const bokeh = new BokehPass(scene, camera, { focus: 12, aperture: mobile ? 0.0012 : 0.0018, maxblur: mobile ? 0.005 : 0.008 });
+  const bokeh = new BokehPass(scene, camera, { focus: 12, aperture: lite ? 0.0012 : 0.0018, maxblur: lite ? 0.005 : 0.008 });
   skipAiry(bokeh);
+  // An old phone goes without depth of field: two more full-screen renders.
+  bokeh.enabled = !low;
   composer.addPass(bokeh);
   const grade = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFlash: { value: 0 }, uGrain: { value: 0 }, uCell: { value: 1 } },
@@ -165,22 +201,16 @@ function build(host: HTMLElement, onReady: () => void): Story {
   scene.environmentIntensity = 0.22;
   const hemi = new THREE.HemisphereLight(0xffffff, 0x7f8a96, 1.1);
   scene.add(hemi);
-  // Without a graphics card (a software renderer: seconds per frame) the scans
-  // and the sky only stall the page, so it keeps the light procedural look.
-  // ?hq forces them anyway (for recordings).
-  const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info');
-  const gpu = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '');
-  const rich = !/swiftshader|llvmpipe|softpipe|software/i.test(gpu) || new URLSearchParams(location.search).has('hq');
   // The overcast winter-field sky replaces the studio room once it arrives,
   // turned so its bright patch of cloud sits where the sun light comes from.
   scene.environmentRotation.y = -1.5;
   if (rich) loadSky(renderer).then((env) => {
     scene.environment = env; scene.environmentIntensity = 0.62; hemi.intensity = 0.55;
   }).catch((e) => console.warn('[story] sky', e));
-  const surf = makeSurfaces(mobile);
+  const surf = makeSurfaces(lite);
   const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-7, 13, 9); sun.target.position.set(0, 2, 0);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
+  sun.shadow.mapSize.set(lite ? 1024 : 2048, lite ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 45 });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03; sun.shadow.radius = 4;
   scene.add(sun, sun.target);
@@ -188,7 +218,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   installLayeredFog(sunDir.value);
   // Photo-scanned snow and rock stream in after the first frames (2k on computers).
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  const big = !mobile && Math.min(screen.width, screen.height) * devicePixelRatio >= 1000;
+  const big = !lite && Math.min(screen.width, screen.height) * devicePixelRatio >= 1000;
 
   const rand = (s: number) => { const v = Math.sin(s * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
 
@@ -210,6 +240,10 @@ function build(host: HTMLElement, onReady: () => void): Story {
     wait.then(() => false),
   ]);
   let settled = false;
+  // What the first picture waits for: models, baked light, the 学 glyph, first frames.
+  let loaded = 0;
+  const step = () => { loaded++; onProgress?.(Math.min(1, loaded / 4)); };
+  void worldP.then(step); void lightP.then(step);
   /** All vertices white: procedural stand-ins for the models' baked occlusion. */
   const white = (g: THREE.BufferGeometry) => g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(g.getAttribute('position').count * 3).fill(1), 3));
   /** A modelled rock with its own texture placement (shares the vertex data). */
@@ -230,7 +264,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   // The relief (swells, wind ridges, drifts piled against the stones) comes
   // from shapes.ts, the same code the light was baked from; the grid is
   // squeezed so it is densest around the character.
-  const hillGeo = new THREE.PlaneGeometry(80, 80, mobile ? 170 : 240, mobile ? 170 : 240);
+  const hillGeo = new THREE.PlaneGeometry(80, 80, low ? 130 : lite ? 170 : 240, low ? 130 : lite ? 170 : 240);
   hillGeo.rotateX(-Math.PI / 2);
   const hp = hillGeo.getAttribute('position') as THREE.BufferAttribute, huv = hillGeo.getAttribute('uv') as THREE.BufferAttribute;
   for (let i = 0; i < hp.count; i++) {
@@ -311,7 +345,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const beamTex = makeBeam();
   const beams: THREE.Sprite[] = [];
   [0, -38, -78, -108, -138].forEach((z, j) => {
-    for (let i = 0; i < (mobile ? 2 : 3); i++) {
+    for (let i = 0; i < (lite ? 2 : 3); i++) {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: beamTex, color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
       sp.position.set((rand(j * 7 + i) - 0.5) * 16, 7 + rand(j * 7 + i + 1) * 3, z - 6 - rand(j * 7 + i + 2) * 8);
       sp.scale.set(2.2 + rand(j * 7 + i + 3) * 2.5, 16, 1);
@@ -324,7 +358,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   // Wisps of mist along the flight: low over the snow behind and beside 学
   // (never in front of it), between the floating rocks, round the ring and
   // the portal (clear of their middles), low over the final platform.
-  const mist = makeWisps(mobile ? 16 : 28, (i) => {
+  const mist = makeWisps(low ? 9 : lite ? 16 : 28, (i) => {
     const z = 4 - rand(i + 310) * 150, side = rand(i + 311) < 0.5 ? -1 : 1;
     let x = side * (1.5 + rand(i + 312) * 9), y: number;
     if (z > -40) {
@@ -352,7 +386,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   // out first, and the real time it did (-1: still in place).
   let detachAt: number[] = [], kick: THREE.Vector3[] = [], detachT: number[] = [];
   /** Snow dust puffed out by each brick as it breaks off (DUST particles per brick). */
-  const DUST = mobile ? 4 : 7;
+  const DUST = low ? 3 : lite ? 4 : 7;
   let dustBirth: THREE.BufferAttribute | null = null, dustDirty = false;
   const markDust = (i: number, at: number) => {
     if (!dustBirth) return;
@@ -385,7 +419,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   const charGroup = new THREE.Group(); charGroup.position.set(0, 1.25, 0); scene.add(charGroup);
 
   // A loose web of thin lines around the character, like a survey being drawn.
-  const webN = mobile ? 70 : 120, webPos = new Float32Array(webN * 6);
+  const webN = lite ? 70 : 120, webPos = new Float32Array(webN * 6);
   for (let i = 0; i < webN; i++) {
     const a = new THREE.Vector3((rand(i + 1) - 0.5) * 16, rand(i + 2) * 8 - 1, (rand(i + 3) - 0.5) * 10);
     const b = a.clone().add(new THREE.Vector3((rand(i + 4) - 0.5) * 3, (rand(i + 5) - 0.5) * 3, (rand(i + 6) - 0.5) * 3));
@@ -452,12 +486,12 @@ function build(host: HTMLElement, onReady: () => void): Story {
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
     lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false }));
     charGroup.add(lines);
-    settled = true;
-  }).catch((e) => { console.error('[story] 学', e); settled = true; });
+    settled = true; step();
+  }).catch((e) => { console.error('[story] 学', e); settled = true; step(); });
 
   /* ---------- scene 3: floating ice rocks along the flight ---------- */
   const rocks: THREE.Mesh[] = [];
-  const placeRocks = (world: World | null) => { for (let i = 0; i < (mobile ? 26 : 40); i++) {
+  const placeRocks = (world: World | null) => { for (let i = 0; i < (low ? 18 : lite ? 26 : 40); i++) {
     const r = 0.5 + rand(i + 40) * 1.6;
     const m = new THREE.Mesh(world ? rockFor(world.rocks[(i * 5 + 3) % ROCKS], r, i + 100) : rockGeo(i + 100, r), rockMat);
     if (world) m.scale.set(r, r * 0.78, r);
@@ -501,7 +535,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
     b.userData.home = b.position.clone();
     portal.add(b); portalBlocks.push(b);
   }
-  const coreN = mobile ? 500 : 900, cp = new Float32Array(coreN * 3);
+  const coreN = lite ? 500 : 900, cp = new Float32Array(coreN * 3);
   for (let i = 0; i < coreN; i++) { const a = rand(i + 70) * 6.283, r = Math.pow(rand(i + 71), 0.6) * 2.6; cp[i * 3] = Math.cos(a) * r; cp[i * 3 + 1] = Math.sin(a) * r; cp[i * 3 + 2] = (rand(i + 72) - 0.5) * 0.8; }
   const coreGeo = new THREE.BufferGeometry(); coreGeo.setAttribute('position', new THREE.BufferAttribute(cp, 3));
   const coreMat = new THREE.PointsMaterial({ color: new THREE.Color(1.15, 1.2, 1.28), size: 0.045, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
@@ -528,7 +562,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   });
   let dust: THREE.Points | null = null, dustHome: Float32Array | null = null, dustFrom: Float32Array | null = null;
   glyphCells('开始', 220, 110, 2).then((cells) => {
-    const n = Math.min(cells.length, mobile ? 2200 : 4000), stride = cells.length / n;
+    const n = Math.min(cells.length, low ? 1500 : lite ? 2200 : 4000), stride = cells.length / n;
     dustHome = new Float32Array(n * 3); dustFrom = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const c = cells[Math.floor(i * stride)];
@@ -560,7 +594,7 @@ function build(host: HTMLElement, onReady: () => void): Story {
   // it): each flake falls and drifts in the wind, and wraps round the box, so
   // it snows wherever the flight goes. Near flakes are big and soft, like out
   // of focus; far ones fade into the fog.
-  const snowN = mobile ? 1300 : 2600, sp = new Float32Array(snowN * 4);
+  const snowN = low ? 800 : lite ? 1300 : 2600, sp = new Float32Array(snowN * 4);
   for (let i = 0; i < snowN; i++) sp.set([rand(i + 90), rand(i + 91), rand(i + 92), rand(i + 93)], i * 4);
   const snowGeo = new THREE.BufferGeometry();
   snowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(snowN * 3), 3));
@@ -646,6 +680,27 @@ function build(host: HTMLElement, onReady: () => void): Story {
   let flashT = -1, flash = 0, prevZ = Infinity, prevS = 0;
   addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { tx = (e.clientX / innerWidth) * 2 - 1; ty = (e.clientY / innerHeight) * 2 - 1; } }, { passive: true });
   addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); composer.setPixelRatio(renderer.getPixelRatio()); });
+
+  // The governor: if the device cannot hold about 40 frames a second, the
+  // picture gets cheaper, one step at a time, and never dearer again:
+  // fewer pixels, then no depth of field and contact shadows, then fewer still.
+  let govN = 0, govSum = 0, govSkip = 2, govLevel = 0;
+  const setRatio = (r: number) => {
+    pixelRatio = r; renderer.setPixelRatio(r); composer.setPixelRatio(r);
+    snowMat.uniforms.uMax.value = 34 * r;
+  };
+  const govern = (real: number) => {
+    if (soft || govLevel >= 3 || real > 0.25) return; // a software renderer has nothing left to give; a long gap is a hidden tab
+    govSum += real;
+    if (++govN < 50) return;
+    const avg = govSum / govN; govN = 0; govSum = 0;
+    if (govSkip > 0) { govSkip--; return; } // the first windows include shader compilation
+    if (avg < 0.026) return;
+    govLevel++; govSkip = 1;
+    if (govLevel === 2) { bokeh.enabled = false; if (ao) ao.enabled = false; }
+    else setRatio(Math.max(1, pixelRatio * 0.75));
+    document.documentElement.dataset.quality = `${quality}-${govLevel}`;
+  };
 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e3 = new THREE.Euler(), v3 = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), sc = new THREE.Vector3();
   const look = new THREE.Vector3();
@@ -811,7 +866,8 @@ function build(host: HTMLElement, onReady: () => void): Story {
     grade.uniforms.uCell.value = Math.max(1, renderer.getPixelRatio() * 0.75);
     tickMaterials(t);
     composer.render();
-    if (!ready && (settled || t > 3) && t > 0.15) { ready = true; onReady(); }
+    if (!ready && (settled || t > 3) && t > 0.15) { ready = true; step(); onProgress?.(1); onReady(); }
+    else if (ready && !capture) govern(real);
   };
   frame();
 

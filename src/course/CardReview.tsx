@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { GRADES, previewInterval, type Grade, type WordCard } from './store';
 import { Py, Say, useCourseCtx } from './ui';
 import { L, plural, t } from '../i18n';
+import { iceTilt } from '../ice/Ice';
 
 /**
  * Flashcard review: see the front, recall, flip, grade honestly. The queue is
@@ -47,7 +48,7 @@ export default function CardReview({ cards, onFinish }: { cards: WordCard[]; onF
   return (
     <div className="review">
       <div className="muted small center-text">{t('Осталось', 'Left')}: {queue.length}</div>
-      <button type="button" className={`flash ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(true)} aria-label={t('Перевернуть карточку', 'Flip the card')}>
+      <button type="button" key={card.id} className={`flash ice-card ${flipped ? 'flipped' : ''}`} {...iceTilt} onClick={() => setFlipped(true)} aria-label={t('Перевернуть карточку', 'Flip the card')}>
         <div className="flash-front">
           {front === 'zh' ? <div className="zh-xxl">{card.zh}</div> : <div className="q-ru">{L(card.ru)}</div>}
           {!flipped && <span className="muted small">{t('Вспомни и нажми, чтобы перевернуть', 'Recall it, then tap to flip')}</span>}

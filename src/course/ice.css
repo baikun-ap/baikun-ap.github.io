@@ -157,3 +157,62 @@ code { background: var(--blue-wash); }
 }
 :root[data-theme='light'] .x-logo i { background: none; color: var(--ink-faint); }
 :root[data-theme='light'] .eyebrow, :root[data-theme='light'] .x-eyebrow { color: var(--ink-muted); }
+
+/* ==========================================================================
+   3D ice word cards: a thick slab of ice that leans towards the pointer
+   (src/ice/Ice.tsx, iceTilt), with frost inside, a gloss that follows the
+   pointer and a full turn when the answer shows. Snowflakes for a right
+   answer: src/ice/snow.ts.
+   ========================================================================== */
+.review { perspective: 1100px; }
+.flash.ice-card {
+  position: relative; transform-style: preserve-3d; overflow: visible;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s;
+  background:
+    radial-gradient(60% 50% at var(--gx, 30%) var(--gy, 12%), rgba(255, 255, 255, .55), transparent 70%),
+    linear-gradient(160deg, rgba(255, 255, 255, .5), rgba(190, 215, 240, .28) 45%, rgba(255, 255, 255, .34));
+  border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 var(--edge), inset 0 -18px 30px -18px rgba(120, 170, 220, .35), 0 26px 50px -18px rgba(28, 52, 80, .35);
+  animation: ice-in .5s cubic-bezier(.2, .8, .2, 1);
+}
+/* the back of the slab, a little behind the face: this is its thickness */
+.flash.ice-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; transform: translateZ(-22px);
+  background: linear-gradient(200deg, rgba(150, 190, 230, .5), rgba(90, 130, 180, .35)); border: 1px solid rgba(255, 255, 255, .35); pointer-events: none; }
+/* frost trapped inside: streaks and a few air bubbles */
+.flash.ice-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; transform: translateZ(-10px); pointer-events: none; opacity: .7;
+  background:
+    radial-gradient(circle at 18% 78%, rgba(255, 255, 255, .7) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 24%, rgba(255, 255, 255, .6) 0 3px, transparent 4px),
+    radial-gradient(circle at 66% 86%, rgba(255, 255, 255, .5) 0 1.5px, transparent 2.5px),
+    repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 255, 255, .13) 22px 23px, transparent 23px 51px); }
+.flash.ice-card > * { transform: translateZ(26px); }
+.flash.ice-card .zh-xxl { text-shadow: 0 10px 24px rgba(28, 52, 80, .28); }
+.flash.ice-card.flipped { animation: ice-turn .7s cubic-bezier(.2, .8, .2, 1); }
+@keyframes ice-in { from { opacity: 0; transform: translateY(18px) rotateX(-18deg) scale(.96); } }
+@keyframes ice-turn { from { transform: rotateY(-180deg) scale(.94); } 55% { transform: rotateY(12deg) scale(1.01); } }
+@keyframes ice-sway-back { 0%, 100% { transform: translate3d(-7px, 4px, -22px); } 50% { transform: translate3d(7px, -4px, -22px); } }
+@keyframes ice-sway-frost { 0%, 100% { transform: translate3d(-3px, 2px, -10px); } 50% { transform: translate3d(3px, -2px, -10px); } }
+:root[data-theme='dark'] .flash.ice-card {
+  background:
+    radial-gradient(60% 50% at var(--gx, 30%) var(--gy, 12%), rgba(160, 225, 255, .22), transparent 70%),
+    linear-gradient(160deg, rgba(120, 180, 240, .16), rgba(60, 100, 170, .1) 45%, rgba(150, 130, 250, .14));
+  box-shadow: inset 0 1px 0 var(--edge), inset 0 -18px 30px -18px rgba(127, 227, 255, .25), 0 26px 60px -18px rgba(0, 0, 0, .7), 0 0 40px -10px rgba(127, 227, 255, .25);
+}
+:root[data-theme='dark'] .flash.ice-card::before { background: linear-gradient(200deg, rgba(60, 110, 180, .3), rgba(20, 40, 90, .35)); border-color: rgba(170, 215, 255, .18); }
+:root[data-theme='dark'] .flash.ice-card::after { opacity: .35; }
+/* touch screens have no pointer to lean to: the slab's depth sways on its own
+   (its inner layers move, the card itself stays put under the finger) */
+@media (hover: none) {
+  .flash.ice-card::before { animation: ice-sway-back 7s ease-in-out infinite; }
+  .flash.ice-card::after { animation: ice-sway-frost 7s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) { .flash.ice-card, .flash.ice-card.flipped, .flash.ice-card::before, .flash.ice-card::after { animation: none; transition: none; }
+  .flash.ice-card, .flash.ice-card.flipped { transform: none; } }
+
+.snow-burst { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.snow-burst span { position: absolute; color: #9fdcff; filter: drop-shadow(0 0 6px rgba(127, 227, 255, .7)); will-change: transform, opacity; }
+.snow-burst svg { display: block; width: 100%; height: 100%; }
+:root[data-theme='light'] .snow-burst span { color: #ffffff; filter: drop-shadow(0 1px 3px rgba(29, 34, 40, .55)); }
+/* a backdrop filter would flatten the slab's 3D layers */
+.flash.ice-card { -webkit-backdrop-filter: none; backdrop-filter: none; }
