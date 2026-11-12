@@ -56,7 +56,9 @@ a.chip:hover, button.chip:hover { background: var(--white); color: var(--ink); }
 
 /* footer */
 .bottom { position: fixed; z-index: 5; left: 24px; right: 24px; bottom: 20px; display: flex; gap: 6px; align-items: center; }
+.bottom #quality { margin-left: auto; }
 .bottom .sound { margin-left: auto; width: 34px; padding: 0; justify-content: center; }
+.bottom #quality + .sound { margin-left: 0; }
 .sound svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .sound .w, .sound .x { transition: opacity .3s; }
 .sound[aria-pressed="false"] .w { opacity: 0; }

@@ -85,6 +85,20 @@ go?.addEventListener('pointerenter', () => story?.hover(true));
 go?.addEventListener('pointerleave', () => story?.hover(false));
 go?.addEventListener('focus', () => story?.hover(true));
 go?.addEventListener('blur', () => story?.hover(false));
+// GFX chip: AUTO → LOW → MID → HIGH. The choice is kept and the world is rebuilt.
+const gfx = $<HTMLButtonElement>('#quality');
+if (gfx && !story) gfx.remove();
+else if (gfx) {
+  const LEVELS = ['auto', 'low', 'mid', 'high'];
+  let kept = 'auto';
+  try { const v = localStorage.getItem('baikun-gfx'); if (v && LEVELS.includes(v)) kept = v; } catch { /* storage blocked */ }
+  gfx.textContent = `GFX · ${kept.toUpperCase()}`;
+  gfx.addEventListener('click', () => {
+    const next = LEVELS[(LEVELS.indexOf(kept) + 1) % LEVELS.length];
+    try { if (next === 'auto') localStorage.removeItem('baikun-gfx'); else localStorage.setItem('baikun-gfx', next); } catch { /* storage blocked */ }
+    location.reload();
+  });
+}
 const sound = $<HTMLButtonElement>('#sound');
 if (sound && !story) sound.remove();
 sound?.addEventListener('click', () => sound.setAttribute('aria-pressed', String(story?.toggleSound() ?? false)));

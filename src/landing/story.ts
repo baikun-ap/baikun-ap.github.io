@@ -87,13 +87,16 @@ export type Quality = 'low' | 'mid' | 'high';
 /**
  * The starting level. A software renderer and phones that say they are short
  * of memory start low, other phones in the middle, computers high. `?q=low`,
- * `?q=mid` or `?q=high` in the address forces a level. Whatever the guess, the
+ * `?q=mid` or `?q=high` in the address forces a level, and so does the GFX
+ * chip on the page (main.ts). Whatever the level, the
  * frame-time governor in the loop steps the cost down on a device that cannot
  * keep up.
  */
 function pickQuality(mobile: boolean, soft: boolean): Quality {
   const asked = new URLSearchParams(location.search).get('q');
   if (asked === 'low' || asked === 'mid' || asked === 'high') return asked;
+  // The GFX chip in the footer keeps the visitor's own choice.
+  try { const kept = localStorage.getItem('baikun-gfx'); if (kept === 'low' || kept === 'mid' || kept === 'high') return kept; } catch { /* storage blocked */ }
   if (soft) return 'low';
   const nav = navigator as Navigator & { deviceMemory?: number };
   const mem = nav.deviceMemory ?? 8, cores = nav.hardwareConcurrency || 8;
