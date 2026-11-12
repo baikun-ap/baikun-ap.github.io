@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FIREBASE_CONFIG } from '../firebase-config';
-import type { CourseState, LessonProgress, WordCard } from './store';
+import type { CourseState, LessonProgress, MicroMark, WordCard } from './store';
 import { loadState, saveState } from '../lib/db';
 import type { AppState } from '../lib/types';
 
@@ -51,6 +51,13 @@ function mergeCards(a: Record<string, WordCard>, b: Record<string, WordCard>) {
   return out;
 }
 
+/** Each microeconomics question keeps whichever result was given last. */
+function mergeMicro(a: Record<string, MicroMark> = {}, b: Record<string, MicroMark> = {}) {
+  const out = { ...a };
+  for (const [id, m] of Object.entries(b)) if (!out[id] || (m?.at ?? 0) > (out[id].at ?? 0)) out[id] = m;
+  return out;
+}
+
 export function mergeCourse(local: CourseState, remote: CourseState): CourseState {
   const newer = (remote.lastDay ?? '') > (local.lastDay ?? '') ? remote : local;
   const byDay = (a: Record<string, number> = {}, b: Record<string, number> = {}) => {
@@ -71,6 +78,7 @@ export function mergeCourse(local: CourseState, remote: CourseState): CourseStat
     days,
     right: byDay(local.right, remote.right),
     reviews: byDay(local.reviews, remote.reviews),
+    ...(local.micro || remote.micro ? { micro: mergeMicro(local.micro, remote.micro) } : {}),
     settings: local.settings,
   };
 }
